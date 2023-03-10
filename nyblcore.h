@@ -1,3 +1,4 @@
+
 #ifndef JERBOA_H_
 #define JERBOA_H_
 
@@ -6,7 +7,7 @@
 #endif
 
 #ifndef MOC_TICKS
-#define MOC_TICKS 0
+#define MOC_TICKS 1
 #endif
 
 #ifndef WHICH_PWM
@@ -46,7 +47,7 @@ void SpinDelayFast(word n) {
   }
 }
 
-const PROGMEM char MoctalTick_GapFollows[] = {0/*unused*/, 0,1, 0,0,1, 0,0,1};
+const PROGMEM char MoctalTick_GapFollows[] = {0/*unused*/,  0,0, 0,0,0, 0,0,1};
 
 bool led;
 void LedOn() { led = true; digitalWrite(WHICH_LED, HIGH); }    // Set low bit; other bits are pullups.
@@ -91,12 +92,35 @@ struct MoctalTicker {
   volatile byte shifted;  // High bit is output; shifts to the left.
   volatile byte tick;     // Counts within states.
   volatile byte state;    // Counts bits and gaps.
+  // volatile byte data_last;
 
   static void Setup() {
     pinMode(WHICH_LED, OUTPUT);
   }  
 
   void Tick() {
+   //  if (tick == 0 || (pgm_read_byte(MoctalTick_GapFollows+state) == 0 && tick== 5)) {
+   //    if (state==0 || state==8) {
+   //      shifted = data;
+   //      state = 1;
+   //    } else {
+   //      shifted <<= 1;
+   //      ++state;
+   //    }
+      
+   //    if (shifted & 0x80) {
+   //      tick = 12;  // Long pulse.
+   //    } else {
+   //      tick = 9;  // Short pulse.
+   //    }
+   //  } 
+
+   // if (tick > 7) {
+   //    LedOn();
+   //  } else {
+   //    LedOff();
+   //  }
+   //  tick--;
     if (tick == 0) {
       // MOVE
       if (state==0 || state==8) {

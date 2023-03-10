@@ -5,7 +5,7 @@
 
 // make breakbeat
 
-#include "/home/zns/Arduino/nyblcore/jerboa.h"
+#include "/home/zns/Arduino/nyblcore/nyblcore.h"
 #include "/home/zns/Arduino/nyblcore/random.h"
 #include "/home/zns/Arduino/nyblcore/generated-breakbeat-table.h"
 
@@ -62,6 +62,9 @@ void Setup() {
 }
 
 void Loop() {
+  byte knobK = (byte)InK();
+  byte knobB = InB();
+
   if (gate_on == false && phase_sample_last != phase_sample) {
     audio_last = ((int)pgm_read_byte(SAMPLE_TABLE + phase_sample)) << SHIFTY;
     if (thresh_next > thresh_counter) {
@@ -75,6 +78,8 @@ void Loop() {
   }
   // no interpolation
   // OutF(audio_last >> SHIFTY);
+
+  Moctal(knobK);  // 10100101
 
   // linear interpolation with shifts
   audio_now = (audio_last + audio_add) >> SHIFTY;
@@ -149,8 +154,6 @@ void Loop() {
     }
 
 
-    LedOn();
-
     // determine directions
     phase_sample += (direction * 2 - 1);
     if (phase_sample > pos[NUM_SAMPLES]) {
@@ -172,7 +175,7 @@ void Loop() {
 
     if (phase_sample % retrigs[retrig] == 0) {
       if (volume_mod > 0) {
-        if (volume_mod >3 || r3 < 90) {
+        if (volume_mod > 3 || r3 < 90) {
           volume_mod--;
         }
       } else {
@@ -247,6 +250,5 @@ void Loop() {
     }
   } else {
     r3 = RandomByte();
-    LedOff();
   }
 }
