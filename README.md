@@ -9,3 +9,17 @@ nyblcore is a tiny sampler. emphasis on tiny - it has 512 bytes of memory (~30 m
 - performance (jumping, stuttering, reversing, stretching)
 - clock syncing
 - core swapping
+
+## usage
+
+- knob k: switches parameter
+- knob b: sets parameter
+
+### parameters:
+
+- tempo 
+- volume
+- noise gate
+- distortion
+- probabilty
+- stretch
