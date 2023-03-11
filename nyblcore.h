@@ -7,7 +7,7 @@
 #endif
 
 #ifndef MOC_TICKS
-#define MOC_TICKS 1
+#define MOC_TICKS 0
 #endif
 
 #ifndef WHICH_PWM

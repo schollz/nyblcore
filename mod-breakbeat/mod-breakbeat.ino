@@ -13,7 +13,7 @@
 
 byte noise_gate = 0;
 byte distortion = 0;
-byte volume_reduce = 2;  // volume 0 to 6
+byte volume_reduce = 0;  // volume 0 to 6
 byte volume_mod = 0;
 byte thresh_counter = 0;
 byte thresh_next = 3;
@@ -25,7 +25,7 @@ byte select_sample_start = 0;
 byte select_sample_end = NUM_SAMPLES - 1;
 byte direction = 1;  // 0 = reverse, 1 = forward
 byte retrig = 4;
-byte tempo = 7;
+byte tempo = 5;
 word gate_counter = 0;
 word gate_thresh = 16;  // 1-16
 word gate_thresh_set = 65000;
@@ -39,6 +39,8 @@ byte stretch_max = 0;
 word stretch_time = 0;
 word stretch_add = 0;
 byte r3;
+byte knobK_last = 0;
+byte knobB_last = 0;
 
 #define NUM_TEMPOS 12
 byte *tempo_steps[] = {
@@ -79,49 +81,69 @@ void Loop() {
   // no interpolation
   // OutF(audio_last >> SHIFTY);
 
-  Moctal(knobK);  // 10100101
+  // Moctal(knobK);  // 10100101
+  // if (knobK_last != knobK) {
+  //   if (knobK == 0) {
+  //     volume_reduce = 10;
+  //   } else if (knobK < 128) {
+  //     volume_reduce = linlin(128 - knobK, 0, 128, 0, 10);
+  //     distortion = 0;
+  //   } else if (knobK > 128) {
+  //     volume_reduce = 0;
+  //     distortion = linlin(knobK, 128, 255, 0, 60);
+  //   }
+  //   knobK_last = knobK;
+  // }
+  // if (knobB_last != knobB) {
+  //   tempo = linlin(knobB,0,255,0,NUM_TEMPOS);
+  //   knobB_last = knobB;
+  // }
 
+  
   // linear interpolation with shifts
   audio_now = (audio_last + audio_add) >> SHIFTY;
-  if (noise_gate > 0) {
-    if (audio_now > 128) {
-      if (audio_now > 128 + noise_gate) {
-        audio_now -= noise_gate;
-      } else {
-        audio_now = 128;
+  if (volume_reduce == 10) audio_now = 128;
+  if (audio_now != 128) {
+    if (noise_gate > 0) {
+      if (audio_now > 128) {
+        if (audio_now > 128 + noise_gate) {
+          audio_now -= noise_gate;
+        } else {
+          audio_now = 128;
+        }
+      }
+      if (audio_now < 128) {
+        if (audio_now < 128 - noise_gate) {
+          audio_now += noise_gate;
+        } else {
+          audio_now = 128;
+        }
       }
     }
-    if (audio_now < 128) {
-      if (audio_now < 128 - noise_gate) {
-        audio_now += noise_gate;
-      } else {
-        audio_now = 128;
+    if (distortion > 0) {
+      if (audio_now > 128) {
+        if (audio_now < (255 - distortion)) {
+          audio_now += distortion;
+        } else {
+          // fold
+          audio_now = 255 - distortion;
+        }
+      }
+      if (audio_now < 128) {
+        if (audio_now > distortion) {
+          audio_now -= distortion;
+        } else {
+          // fold
+          audio_now = distortion - audio_now;
+        }
       }
     }
-  }
-  if (distortion > 0) {
-    if (audio_now > 128) {
-      if (audio_now < (255 - distortion)) {
-        audio_now += distortion;
-      } else {
-        // fold
-        audio_now = 255 - distortion;
+    if ((volume_reduce + volume_mod) > 0) {
+      if (audio_now > 128) {
+        audio_now = ((audio_now - 128) >> (volume_reduce + volume_mod)) + 128;
+      } else if (audio_now < 128) {
+        audio_now = 128 - ((128 - audio_now) >> (volume_reduce + volume_mod));
       }
-    }
-    if (audio_now < 128) {
-      if (audio_now > distortion) {
-        audio_now -= distortion;
-      } else {
-        // fold
-        audio_now = distortion - audio_now;
-      }
-    }
-  }
-  if ((volume_reduce + volume_mod) > 0) {
-    if (audio_now > 128) {
-      audio_now = ((audio_now - 128) >> (volume_reduce + volume_mod)) + 128;
-    } else if (audio_now < 128) {
-      audio_now = 128 - ((128 - audio_now) >> (volume_reduce + volume_mod));
     }
   }
   OutF(audio_now);
@@ -246,6 +268,11 @@ void Loop() {
       }
 
       // set new phase
+      if (select_sample % 2 == 0) {
+        LedOn();
+      } else {
+        LedOff();
+      }
       phase_sample = pos[select_sample];
     }
   } else {
