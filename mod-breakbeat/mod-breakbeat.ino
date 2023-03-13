@@ -10,6 +10,9 @@
 #include "/home/zns/Arduino/nyblcore/generated-breakbeat-table.h"
 
 #define SHIFTY 6
+#define PARM1 60
+#define PARM2 120
+#define PARM3 180
 
 byte noise_gate = 0;
 byte distortion = 0;
@@ -42,6 +45,8 @@ word stretch_add = 0;
 byte r3;
 byte knobK_last = 0;
 byte knobB_last = 0;
+byte left = 0;
+byte right = 0;
 
 #define NUM_TEMPOS 12
 byte *tempo_steps[] = {
@@ -83,28 +88,45 @@ void Loop() {
   // OutF(audio_last >> SHIFTY);
 
   // Moctal(knobK);  // 10100101
-  // if (knobK_last != knobK) {
-  //   if (knobK == 0) {
-  //     volume_reduce = 10;
-  //   } else if (knobK < 128) {
-  //     volume_reduce = linlin(128 - knobK, 0, 128, 0, 10);
-  //     distortion = 0;
-  //   } else if (knobK > 128) {
-  //     volume_reduce = 0;
-  //     distortion = linlin(knobK, 128, 255, 0, 60);
-  //   }
-  //   knobK_last = knobK;
-  // }
-  // if (knobB_last != knobB) {
-  //   if (knobB<128) {
-  //     tempo = linlin(knobB,0,128,0,NUM_TEMPOS);
-  //     base_direction = 0; // reverse
-  //   } else if (knobB>128) {
-  //     tempo = linlin(knobB,128,255,0,NUM_TEMPOS);
-  //     base_direction = 1; // forward
-  //   }
-  //   knobB_last = knobB;
-  // }
+
+  if (knobK_last != knobK) {
+    // check parameter knob
+    if (knobB_last != knobB) {
+      // determine which parameter is based on the pins
+      left = (byte)(thresh_next & 0xF0) >> 4;
+      right = (byte)(thresh_next & 0x0F);
+    }
+
+    if (left < PARM1) {
+      // volume
+      if (knobK == 0) {
+        volume_reduce = 10;
+      } else if (knobK < 128) {
+        volume_reduce = linlin(128 - knobK, 0, 128, 0, 10);
+        distortion = 0;
+      } else if (knobK > 128) {
+        volume_reduce = 0;
+        distortion = linlin(knobK, 128, 255, 0, 60);
+      }      
+    } else if (left < PARM2) {
+      left = 1;
+    } else if (left < PARM3) {
+      
+    } else {
+
+    }
+    knobK_last = knobK;
+  }
+  if (knobB_last != knobB) {
+    if (knobB<128) {
+      tempo = linlin(knobB,0,128,0,NUM_TEMPOS);
+      base_direction = 0; // reverse
+    } else if (knobB>128) {
+      tempo = linlin(knobB,128,255,0,NUM_TEMPOS);
+      base_direction = 1; // forward
+    }
+    knobB_last = knobB;
+  }
 
   
   // linear interpolation with shifts
