@@ -24,6 +24,7 @@ byte select_sample = 0;
 byte select_sample_start = 0;
 byte select_sample_end = NUM_SAMPLES - 1;
 byte direction = 1;  // 0 = reverse, 1 = forward
+byte base_direction = 0; // 0 = reverse, 1 == forward
 byte retrig = 4;
 byte tempo = 5;
 word gate_counter = 0;
@@ -95,7 +96,13 @@ void Loop() {
   //   knobK_last = knobK;
   // }
   // if (knobB_last != knobB) {
-  //   tempo = linlin(knobB,0,255,0,NUM_TEMPOS);
+  //   if (knobB<128) {
+  //     tempo = linlin(knobB,0,128,0,NUM_TEMPOS);
+  //     base_direction = 0; // reverse
+  //   } else if (knobB>128) {
+  //     tempo = linlin(knobB,128,255,0,NUM_TEMPOS);
+  //     base_direction = 1; // forward
+  //   }
   //   knobB_last = knobB;
   // }
 
@@ -206,9 +213,9 @@ void Loop() {
 
         // randomize direction
         if (r1 < 60) {
-          direction = 0;
+          direction = 1-base_direction;
         } else {
-          direction = 1;
+          direction = base_direction;
         }
 
         // random retrig
