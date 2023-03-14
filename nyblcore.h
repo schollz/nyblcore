@@ -74,15 +74,26 @@ void Fault(byte n) {
   }
 }
 
-word linlin(word f, word slo, word shi, word dlo, word dhi) {
-    if (f<=slo) {
-        return dlo;
-    } else if (f >= shi) {
-        return dhi;
-    } else {
-        return (f-slo)*(dhi-dlo)/(shi-slo)+dlo;
-    }
-}
+// word linlin(word f, word slo, word shi, word dlo, word dhi) {
+//     if (f<=slo) {
+//         return dlo;
+//     } else if (f >= shi) {
+//         return dhi;
+//     } else {
+//         return (f-slo)*(dhi-dlo)/(shi-slo)+dlo;
+//     }
+// }
+
+
+// byte linlin2(byte f, byte slo, byte shi, byte dlo, byte dhi) {
+//     if (f<=slo) {
+//         return dlo;
+//     } else if (f >= shi) {
+//         return dhi;
+//     } else {
+//         return (byte)(((word)(f-slo))*((word)(dhi-dlo))/(shi-slo)+dlo);
+//     }
+// }
 
 
 struct MoctalTicker {
@@ -347,7 +358,8 @@ void setup() { jerboa_internal::setup(); }
 void loop() { jerboa_internal::loop(); }
 
 // public wrappers
-word linlin(word f, word slo, word shi, word dlo, word dhi) { return jerboa_internal::linlin(f,slo,shi,dlo,dhi); }
+// inline byte linlin2(byte f, byte slo, byte shi, byte dlo, byte dhi) { return jerboa_internal::linlin(f,slo,shi,dlo,dhi);}
+// inline word linlin(word f, word slo, word shi, word dlo, word dhi) { return jerboa_internal::linlin(f,slo,shi,dlo,dhi); }
 inline byte InA()   { return jerboa_internal::AnalogA; }
 inline byte InB()   { return jerboa_internal::AnalogB; }
 inline byte InR()   { return jerboa_internal::AnalogK; }  // R was old name for K.

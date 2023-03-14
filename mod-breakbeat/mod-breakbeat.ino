@@ -6,7 +6,6 @@
 // make breakbeat
 
 #include "/home/zns/Arduino/nyblcore/nyblcore.h"
-#include "/home/zns/Arduino/nyblcore/random.h"
 #include "/home/zns/Arduino/nyblcore/generated-breakbeat-table.h"
 
 #define SHIFTY 6
@@ -26,8 +25,8 @@ word phase_sample_last = 11;
 byte select_sample = 0;
 byte select_sample_start = 0;
 byte select_sample_end = NUM_SAMPLES - 1;
-byte direction = 1;  // 0 = reverse, 1 = forward
-byte base_direction = 0; // 0 = reverse, 1 == forward
+bool direction = 1;       // 0 = reverse, 1 = forward
+bool base_direction = 0;  // 0 = reverse, 1 == forward
 byte retrig = 4;
 byte tempo = 5;
 word gate_counter = 0;
@@ -39,14 +38,19 @@ int audio_next = -1;
 byte audio_now = 0;
 char audio_add = 0;
 byte stretch_amt = 0;
-byte stretch_max = 0;
-word stretch_time = 0;
 word stretch_add = 0;
-byte r3;
 byte knobK_last = 0;
 byte knobB_last = 0;
+byte knobA_last = 0;
 byte left = 0;
 byte right = 0;
+byte probability = 0;
+bool do_retrigger = false;
+bool do_stutter = false;
+bool do_stretch = false;
+int r1i = 123798;
+int r2i = 123879;
+int r3i = 223879;
 
 #define NUM_TEMPOS 12
 byte *tempo_steps[] = {
@@ -66,12 +70,12 @@ byte *tempo_steps[] = {
 };
 
 void Setup() {
-  RandomSetup();
 }
 
 void Loop() {
-  byte knobK = (byte)InK();
+  byte knobA = InA();
   byte knobB = InB();
+  byte knobK = InK();
 
   if (gate_on == false && phase_sample_last != phase_sample) {
     audio_last = ((int)pgm_read_byte(SAMPLE_TABLE + phase_sample)) << SHIFTY;
@@ -90,45 +94,54 @@ void Loop() {
   // Moctal(knobK);  // 10100101
 
   if (knobK_last != knobK) {
-    // check parameter knob
-    if (knobB_last != knobB) {
-      // determine which parameter is based on the pins
-      left = (byte)(thresh_next & 0xF0) >> 4;
-      right = (byte)(thresh_next & 0x0F);
-    }
-
-    if (left < PARM1) {
-      // volume
-      if (knobK == 0) {
-        volume_reduce = 10;
-      } else if (knobK < 128) {
-        volume_reduce = linlin(128 - knobK, 0, 128, 0, 10);
-        distortion = 0;
-      } else if (knobK > 128) {
-        volume_reduce = 0;
-        distortion = linlin(knobK, 128, 255, 0, 60);
-      }      
-    } else if (left < PARM2) {
-      left = 1;
-    } else if (left < PARM3) {
-      
-    } else {
-
-    }
+    // determine which parameter is based on the pins
+    left = (byte)(thresh_next & 0xF0) >> 4;
+    right = (byte)(thresh_next & 0x0F);
     knobK_last = knobK;
   }
-  if (knobB_last != knobB) {
-    if (knobB<128) {
-      tempo = linlin(knobB,0,128,0,NUM_TEMPOS);
-      base_direction = 0; // reverse
-    } else if (knobB>128) {
-      tempo = linlin(knobB,128,255,0,NUM_TEMPOS);
-      base_direction = 1; // forward
+  if (knobA_last != knobA) {
+    knobA_last = knobA;
+    // optional
+    if (left < PARM1) {
+      // volume
+      if (knobA == 0) {
+        volume_reduce = 10;
+      } else if (knobA < 128) {
+        volume_reduce = knobA * 10 / 128;  // 0-128 -> 0-10
+        distortion = 0;
+      } else if (knobA > 128) {
+        volume_reduce = 0;
+        distortion = (knobA - 128) * 60 / 128;  // 128-255 -> 0-60
+      }
+    } else if (left < PARM2) {
+      noise_gate = knobA * 60 / 255;  // 0-255 -> 0-60
+    } else if (left < PARM3) {
+      probability = knobA * 100 / 255;
+    } else {
+      do_stretch = knobA > 128;
     }
+  }
+  if (knobB_last != knobB) {
     knobB_last = knobB;
+    if (right < PARM1) {
+      if (knobB < 128) {
+        tempo = knobB * NUM_TEMPOS / 128;
+        base_direction = 0;  // reverse
+      } else if (knobB > 128) {
+        tempo = (knobB - 128) * NUM_TEMPOS / 128;
+        base_direction = 1;  // forward
+      }
+    } else if (right < PARM2) {
+      gate_thresh = (knobB * 4 / 256 + 1) * 4;
+    } else if (right < PARM3) {
+      do_retrigger = knobA > 128;
+    } else {
+      do_stutter = knobB > 128;
+    }
   }
 
-  
+
+
   // linear interpolation with shifts
   audio_now = (audio_last + audio_add) >> SHIFTY;
   if (volume_reduce == 10) audio_now = 128;
@@ -185,7 +198,7 @@ void Loop() {
     if (thresh_nibble >= 6) {
       // update the tempo
       // TODO
-      // tempo = linlin(InK(),0,255,0,12);
+      // tempo = linlin2(InK(),0,255,0,12);
       thresh_nibble = 0;
     }
     thresh_next = tempo_steps[tempo][thresh_nibble / 2];
@@ -195,12 +208,9 @@ void Loop() {
       thresh_next = (byte)(thresh_next & 0x0F);
     }
     // do stretching
-    if (stretch_time > 0) {
-      stretch_time--;
-      if (stretch_time % stretch_add == 0) {
-        stretch_amt++;
-        if (stretch_amt > stretch_max) stretch_amt = stretch_max;
-      }
+    if (do_stretch) {
+      stretch_amt++;
+      if (stretch_amt > 10) stretch_amt = 10;
       thresh_next = thresh_next + stretch_amt;
     }
 
@@ -225,30 +235,34 @@ void Loop() {
     }
 
     if (phase_sample % retrigs[retrig] == 0) {
+      // figure out randoms
+      r1i = (r1i * 32719 + 3) % 32749;
+      r2i = (r2i * 32719 + 3) % 32749;
+      r3i = (r3i * 32719 + 3) % 32749;
+      byte r1 = (byte)r1i;
+      byte r2 = (byte)r2i;
+      byte r3 = (byte)r3i;
+
       if (volume_mod > 0) {
         if (volume_mod > 3 || r3 < 90) {
           volume_mod--;
         }
       } else {
-        byte r1 = RandomByte();
-        byte r2 = RandomByte();
-
         // randomize direction
-        if (r1 < 60) {
-          direction = 1-base_direction;
+        if (r1 < probability) {
+          direction = 1 - base_direction;
         } else {
           direction = base_direction;
         }
 
         // random retrig
-        if (r2 < 15) {
+        if (r2 < probability / 4) {
           retrig = 6;
-        } else if (r2 < 30) {
-
+        } else if (r2 < probability / 3) {
           retrig = 5;
-        } else if (r2 < 45) {
+        } else if (r2 < probability / 2) {
           retrig = 3;
-        } else if (r2 < 60) {
+        } else if (r2 < probability) {
           retrig = 2;
         } else {
           retrig = 4;
@@ -270,10 +284,10 @@ void Loop() {
         if (select_sample > select_sample_end) select_sample = select_sample_start;
 
         // random jump
-        if (r3 < 15) {
-          thresh_next = thresh_next + linlin(r1 - r3, 0, 255, 0, 4);
-          retrig = linlin(r1 - r2, 0, 255, 0, 6);
-          select_sample = linlin(r3, 0, 60, 0, NUM_SAMPLES);
+        if (r3 < probability) {
+          thresh_next = thresh_next + ((r1 - r3) * 4 / 255);
+          retrig = ((r1 - r2) * 6 / 255);
+          select_sample = (r3 * NUM_SAMPLES) / 60;
         }
 
         // setup the gating
@@ -283,16 +297,9 @@ void Loop() {
         }
 
 
-        byte audio = InA();
-        if (audio < 128) {
-          // activate stretch
-          // stretch_amt = 0;
-          // stretch_time = retrigs[retrig] * 2;
-          // stretch_max = 10;
-          // stretch_add = stretch_time / stretch_max;
+        if (do_stutter) {
           volume_mod = 5;
           retrig = 6;
-          //   select_sample = linlin(audio, 0, 128, 0, NUM_SAMPLES);
         }
       }
 
@@ -304,7 +311,5 @@ void Loop() {
       }
       phase_sample = pos[select_sample];
     }
-  } else {
-    r3 = RandomByte();
   }
 }
