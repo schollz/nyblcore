@@ -304,8 +304,8 @@ void setup() {
 
   pwm.Setup();
   in.Setup();
-  moc.Setup();
-  moc.data = 0;
+  // moc.Setup();
+  // moc.data = 0;
 
   ::Setup();  // Call user's Setup.
 }
