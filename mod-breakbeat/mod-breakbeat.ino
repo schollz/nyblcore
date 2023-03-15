@@ -94,40 +94,39 @@ void Loop() {
   // Moctal(knobK);  // 10100101
 
   if (knobK_last != knobK) {
-    // determine which parameter is based on the pins
+    knobK_last = knobK;
+    // update the left/right parameter setting
     left = (byte)(thresh_next & 0xF0) >> 4;
     right = (byte)(thresh_next & 0x0F);
-    knobK_last = knobK;
   }
   if (knobA_last != knobA) {
     knobA_last = knobA;
-    // optional
+    // update the left parameter
     if (left < PARM1) {
       // volume
-      if (knobA == 0) {
-        volume_reduce = 10;
-      } else if (knobA < 128) {
-        volume_reduce = knobA * 10 / 128;  // 0-128 -> 0-10
+      if (knobA <= 128) {
+        volume_reduce = (128 - knobA) * 10 / 128;  // 0-128 -> 10-0
         distortion = 0;
-      } else if (knobA > 128) {
+      } else {
         volume_reduce = 0;
         distortion = (knobA - 128) * 60 / 128;  // 128-255 -> 0-60
       }
     } else if (left < PARM2) {
       noise_gate = knobA * 60 / 255;  // 0-255 -> 0-60
     } else if (left < PARM3) {
-      probability = knobA * 100 / 255;
+      probability = knobA * 100 / 255;  // 0-255 -> 0-100
     } else {
       do_stretch = knobA > 128;
     }
   }
   if (knobB_last != knobB) {
     knobB_last = knobB;
+    // update the right parameter
     if (right < PARM1) {
       if (knobB < 128) {
         tempo = knobB * NUM_TEMPOS / 128;
         base_direction = 0;  // reverse
-      } else if (knobB > 128) {
+      } else {
         tempo = (knobB - 128) * NUM_TEMPOS / 128;
         base_direction = 1;  // forward
       }
@@ -144,8 +143,13 @@ void Loop() {
 
   // linear interpolation with shifts
   audio_now = (audio_last + audio_add) >> SHIFTY;
+
+  // mute audio if volume_reduce==10
   if (volume_reduce == 10) audio_now = 128;
+
+  // if not muted, make some actions
   if (audio_now != 128) {
+    // noise gating
     if (noise_gate > 0) {
       if (audio_now > 128) {
         if (audio_now > 128 + noise_gate) {
@@ -153,8 +157,7 @@ void Loop() {
         } else {
           audio_now = 128;
         }
-      }
-      if (audio_now < 128) {
+      } else {
         if (audio_now < 128 - noise_gate) {
           audio_now += noise_gate;
         } else {
@@ -162,33 +165,33 @@ void Loop() {
         }
       }
     }
+    // distortion / wave-folding
     if (distortion > 0) {
       if (audio_now > 128) {
         if (audio_now < (255 - distortion)) {
           audio_now += distortion;
         } else {
-          // fold
           audio_now = 255 - distortion;
         }
-      }
-      if (audio_now < 128) {
+      } else {
         if (audio_now > distortion) {
           audio_now -= distortion;
         } else {
-          // fold
           audio_now = distortion - audio_now;
         }
       }
     }
+    // reduce volume
     if ((volume_reduce + volume_mod) > 0) {
       if (audio_now > 128) {
         audio_now = ((audio_now - 128) >> (volume_reduce + volume_mod)) + 128;
-      } else if (audio_now < 128) {
+      } else {
         audio_now = 128 - ((128 - audio_now) >> (volume_reduce + volume_mod));
       }
     }
   }
   OutF(audio_now);
+  // for linear interpolation
   audio_add = audio_add + audio_next;
 
   thresh_counter++;
@@ -196,13 +199,10 @@ void Loop() {
     thresh_counter = 0;
     thresh_nibble++;
     if (thresh_nibble >= 6) {
-      // update the tempo
-      // TODO
-      // tempo = linlin2(InK(),0,255,0,12);
       thresh_nibble = 0;
     }
     thresh_next = tempo_steps[tempo][thresh_nibble / 2];
-    if (thresh_nibble == 0 || thresh_nibble == 2 || thresh_nibble == 4) {
+    if (thresh_nibble % 2 == 0) {
       thresh_next = (byte)(thresh_next & 0xF0) >> 4;
     } else {
       thresh_next = (byte)(thresh_next & 0x0F);
