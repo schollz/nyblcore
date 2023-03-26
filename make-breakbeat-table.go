@@ -25,6 +25,7 @@ func convertWavToInts(fnames []string) (err error) {
 
 #define NUM_SAMPLES XXX
 #define SAMPLE_SIZE UUU
+#define TOTAL_SAMPLES VVV
 
 const word retrigs[] = {
 	WWW
@@ -72,6 +73,7 @@ const byte SAMPLE_TABLE[] PROGMEM = {
 	ss = strings.Replace(ss, "YYY", strings.Join(poses, ","), 1)
 	ss = strings.Replace(ss, "ZZZ", sampleString, 1)
 	ss = strings.Replace(ss, "UUU", fmt.Sprint(poses[1]), 1)
+	ss = strings.Replace(ss, "VVV", fmt.Sprint(numSamples), 1)
 	sliceSamples, _ = strconv.Atoi(poses[1])
 	retrigs := []int{
 		sliceSamples * 8,

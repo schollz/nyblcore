@@ -25,20 +25,27 @@ breakbeat4:
 	ls -l 0.wav
 	sox 0.wav output.wav trim 0 0.2 : newfile : restart
 	go run make-breakbeat-table.go
-	sleep 0.2
-	play 0.wav repeat 2
 
 
 breakbeat5:
 	rm -rf output*wav
-	sox bpm150_5.wav -r 4830 -c 1 -b 8 0.wav norm lowpass 2415 trim 0 1.2 dither
+	sox bpm150_5.wav -r 4400 -c 1 -b 8 0.wav norm lowpass 2200 trim 0 1.2 dither
 	ls -l 0.wav
 	sox 0.wav output.wav trim 0 0.2 : newfile : restart
 	go run make-breakbeat-table.go
 
 breakbeat6:
 	rm -rf output*wav
+	sox bpm150_6.wav -r 4400 -c 1 -b 8 0.wav norm lowpass 2200 trim 0 1.2 dither
+	ls -l 0.wav
+	sox 0.wav output.wav trim 0 0.2 : newfile : restart
+	go run make-breakbeat-table.go
+
+
+breakbeat7:
+	rm -rf output*wav
 	sox bpm200.wav -r 2200 -c 1 -b 8 0.wav norm lowpass 1200 trim 0 2.4 dither
 	ls -l 0.wav
 	sox 0.wav output.wav trim 0 0.6 : newfile : restart
 	go run make-breakbeat-table.go
+
