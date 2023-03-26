@@ -6,14 +6,14 @@
 // make breakbeat
 
 #include "/home/zns/Arduino/nyblcore/nyblcore.h"
+#include "/home/zns/Arduino/nyblcore/random.h"
 #include "/home/zns/Arduino/nyblcore/generated-breakbeat-table.h"
+#include <EEPROM.h>
 
 #define SHIFTY 6
-#define PARM1 70
-#define PARM2 150
-#define PARM3 230
+#define PARM1 30
+#define PARM2 220
 
-byte noise_gate = 0;
 byte distortion = 0;
 byte volume_reduce = 0;  // volume 0 to 6
 byte volume_mod = 0;
@@ -26,16 +26,13 @@ byte select_sample = 0;
 byte select_sample_start = 0;
 byte select_sample_end = NUM_SAMPLES - 1;
 bool direction = 1;       // 0 = reverse, 1 = forward
-bool base_direction = 0;  // 0 = reverse, 1 == forward
+bool base_direction = 1;  // 0 = reverse, 1 == forward
 byte retrig = 4;
 byte tempo = 12;
-word gate_counter = 0;
-word gate_thresh = 16;  // 1-16
-word gate_thresh_set = 65000;
-bool gate_on = false;
 int audio_last = 0;
 int audio_next = -1;
 byte audio_now = 0;
+byte audio_played = 0;
 char audio_add = 0;
 byte stretch_amt = 0;
 word stretch_add = 0;
@@ -49,11 +46,9 @@ bool do_stretch = false;
 byte do_retriggerp = false;
 byte do_stutterp = false;
 byte do_stretchp = false;
-int r1i = 123798;
-int r2i = 123879;
-int r3i = 223879;
-byte bcount=0;
-byte lastMoved=0;
+byte bcount = 0;
+byte lastMoved = 0;
+bool firstrun = true;
 
 #define NUM_TEMPOS 16
 byte *tempo_steps[] = {
@@ -76,31 +71,52 @@ byte *tempo_steps[] = {
 };
 
 void Setup() {
-  LedOn();
+  RandomSetup();
 }
 
 void Loop() {
   byte knobA = InA();
-  byte knobB = InB();
   byte knobK = InK();
-  bcount++;
-  byte bthresh=knobA;
-  if (lastMoved==1) {
-    bthresh=knobK;
-  } else if (lastMoved==2) {
-    bthresh=knobB;
+  byte knobB = InB();
+  if (firstrun) {
+    firstrun = false;
+    tempo = EEPROM.read(0);
+    delay(5);
+    base_direction = EEPROM.read(1);
+    delay(5);
+    volume_reduce = EEPROM.read(2);
+    delay(5);
+    distortion = EEPROM.read(3);
+    delay(5);
+    probability = EEPROM.read(4);
+    delay(5);
+    do_stretchp = EEPROM.read(5);
+    delay(5);
+    do_retriggerp = EEPROM.read(6);
+    delay(5);
+    do_stutterp = EEPROM.read(7);
+    delay(5);
+    knobA_last = knobA;
+    knobK_last = knobK;
+    knobB_last = knobB;
   }
-  if (bcount<bthresh) {
+  bcount++;
+  byte bthresh = knobA;
+  if (lastMoved == 1) {
+    bthresh = knobK;
+  } else if (lastMoved == 2) {
+    bthresh = knobB;
+  }
+  if (bcount < bthresh) {
     LedOn();
   } else {
     LedOff();
   }
-  if (bcount==255) {
-    bcount=0;
+  if (bcount == 255) {
+    bcount = 0;
   }
 
-
-  if (gate_on == false && phase_sample_last != phase_sample) {
+  if (phase_sample_last != phase_sample) {
     audio_last = ((int)pgm_read_byte(SAMPLE_TABLE + phase_sample)) << SHIFTY;
     if (thresh_next > thresh_counter) {
       audio_next = ((int)pgm_read_byte(SAMPLE_TABLE + phase_sample + (direction * 2 - 1))) << SHIFTY;
@@ -114,11 +130,11 @@ void Loop() {
   // no interpolation
   // OutF(audio_last >> SHIFTY);
 
-  if (knobK > knobK_last + 10 || knobK < knobK_last - 10) {
+  if (knobK > knobK_last + 5 || knobK < knobK_last - 5) {
     lastMoved = 1;
     knobK_last = knobK;
   }
-  if (knobA > knobA_last + 10 || knobA < knobA_last - 10) {
+  if (knobA > knobA_last + 5 || knobA < knobA_last - 5) {
     lastMoved = 0;
     knobA_last = knobA;
     // update the left parameter
@@ -131,15 +147,17 @@ void Loop() {
         volume_reduce = 0;
         distortion = knobA - 200;  // 200-255 -> 0-30
       }
+      EEPROM.write(2, volume_reduce);
+      EEPROM.write(3, distortion);
     } else if (knobK < PARM2) {
-      noise_gate = knobA * 30 / 255;  // 0-255 -> 0-30
-    } else if (knobK < PARM3) {
-      probability = knobA/2;  // 0-255 -> 0-100
+      probability = knobA / 2;  // 0-255 -> 0-100
+      EEPROM.write(4, probability);
     } else {
-      do_stretchp = knobA/2;
+      do_stretchp = knobA / 2;
+      EEPROM.write(5, do_stretchp);
     }
   }
-  if (knobB > knobB_last + 10 || knobB < knobB_last - 10) {
+  if (knobB > knobB_last + 5 || knobB < knobB_last - 5) {
     lastMoved = 2;
     knobB_last = knobB;
     // update the right parameter
@@ -151,23 +169,16 @@ void Loop() {
         tempo = (knobB - 128) * NUM_TEMPOS / 128;
         base_direction = 1;  // forward
       }
+      EEPROM.write(0, tempo);
+      EEPROM.write(1, base_direction);
     } else if (knobK < PARM2) {
-      if (knobB<60) {
-        gate_thresh=4;
-      } else if (knobB < 120) {
-        gate_thresh=8;
-      } else if (knobB < 160) {
-        gate_thresh=12;
-      } else {
-        gate_thresh = 16;
-      }
-    } else if (knobK < PARM3) {
-      do_retriggerp = knobB/2;
+      do_retriggerp = knobB / 4;
+      EEPROM.write(6, do_retriggerp);
     } else {
-      do_stutterp = knobB/2;
+      do_stutterp = knobB / 4;
+      EEPROM.write(7, do_stutterp);
     }
   }
-
 
 
   // linear interpolation with shifts
@@ -178,22 +189,6 @@ void Loop() {
 
   // if not muted, make some actions
   if (audio_now != 128) {
-    // noise gating
-    if (noise_gate > 0) {
-      if (audio_now > 128) {
-        if (audio_now > 128 + noise_gate) {
-          audio_now -= noise_gate;
-        } else {
-          audio_now = 128;
-        }
-      } else {
-        if (audio_now < 128 - noise_gate) {
-          audio_now += noise_gate;
-        } else {
-          audio_now = 128;
-        }
-      }
-    }
     // distortion / wave-folding
     if (distortion > 0) {
       if (audio_now > 128) {
@@ -219,11 +214,17 @@ void Loop() {
       }
     }
   }
-  OutF(audio_now);
-  // for linear interpolation
-  if (gate_on == false) {
-    audio_add = audio_add + audio_next;
+  // click preventer??
+  if (abs(audio_now-audio_played)>32) {
+    audio_now = (audio_now+audio_played)/2;
+    if (abs(audio_now-audio_played)>32) {
+      audio_now = (audio_now+audio_played)/2;
+    }
   }
+  OutF(audio_now);
+  audio_played=audio_now;
+  // for linear interpolation
+  audio_add = audio_add + audio_next;
 
   thresh_counter++;
   if (thresh_counter == thresh_next) {
@@ -247,25 +248,12 @@ void Loop() {
       phase_sample = pos[NUM_SAMPLES];
     }
 
-
-    // specify the gating
-    if (gate_thresh < 16) {
-      gate_counter++;
-      if (gate_counter > gate_thresh_set) {
-        gate_on = true;
-      } else {
-        gate_on = false;
-      }
-    }
-
     if (phase_sample % retrigs[retrig] == 0) {
-      // figure out randoms
-      r1i = (r1i * 32719 + 3) % 32749;
-      r2i = (r2i * 32719 + 4) % 32749;
-      r3i = (r3i * 32719 + 5) % 32749;
-      byte r1 = (byte)r1i;
-      byte r2 = (byte)r2i;
-      byte r3 = (byte)r3i;
+      // randoms
+      byte r1 = RandomByte();
+      byte r2 = RandomByte();
+      byte r3 = RandomByte();
+      byte r4 = RandomByte();
 
       // do stretching
       if (do_stretchp > 10) {
@@ -287,13 +275,14 @@ void Loop() {
         }
       } else {
         // randomize direction
-        if (r1 < probability) {
-          direction = 1 - base_direction;
+        if (direction==base_direction) {
+          if (r1 < probability/8) {
+            direction = 1-base_direction;
+          }
         } else {
-          direction = base_direction;
-        }
-        if (probability < 10) {
-          direction = 1;
+          if (r1 < probability) {
+            direction = base_direction;
+          }          
         }
 
         // random retrig
@@ -326,21 +315,15 @@ void Loop() {
           if (select_sample > select_sample_end) select_sample = select_sample_start;
 
           // random jump
-          if (r3 < probability) {
+          if (r3 < probability/2) {
             thresh_next = thresh_next + ((r1 - r3) * 4 / 255);
             retrig = ((r1 - r2) * 6 / 255);
             select_sample = (r3 * NUM_SAMPLES) / 60;
           }
         }
 
-        // setup the gating
-        gate_counter = 0;
-        if (gate_thresh < 16) {
-          gate_thresh_set = (retrigs[retrig] * gate_thresh) / 16;
-        }
-
         if (do_retriggerp > 10) {
-          do_retrigger = (r2 < do_retriggerp);
+          do_retrigger = (r4 < do_retriggerp);
         } else {
           do_retrigger = false;
         }
@@ -359,7 +342,11 @@ void Loop() {
         if (do_stutter) {
           if (volume_mod == 0) {
             volume_mod = r2 * 6 / 255;
-            retrig = r3 * 3 / 255 + 3;
+            if (r3 < 120) {
+              retrig = 5;
+            } else {
+              retrig = 6;
+            }
           }
         }
       }

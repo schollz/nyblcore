@@ -1,6 +1,6 @@
 breakbeat:
 	rm -rf output*wav
-	sox bpm150_2.wav -r 6440 -c 1 -b 8  0.wav trim 0 1
+	sox bpm150_2.wav -r 5280 -c 1 -b 8 0.wav norm lowpass 3000 trim 0 1.0 dither
 	ls -l 0.wav
 	sox 0.wav output.wav trim 0 0.2 : newfile : restart
 	go run make-breakbeat-table.go
@@ -14,7 +14,7 @@ breakbeat2:
 	
 breakbeat3:
 	rm -rf output*wav
-	sox bpm150_3.wav -r 4830 -c 1 -b 8 0.wav norm lowpass 2415 trim 0 1.2 dither
+	sox bpm150_3.wav -r 4400 -c 1 -b 8 0.wav norm lowpass 2415 trim 0 1.2 dither
 	ls -l 0.wav
 	sox 0.wav output.wav trim 0 0.2 : newfile : restart
 	go run make-breakbeat-table.go
@@ -47,5 +47,13 @@ breakbeat7:
 	sox bpm200.wav -r 2200 -c 1 -b 8 0.wav norm lowpass 1200 trim 0 2.4 dither
 	ls -l 0.wav
 	sox 0.wav output.wav trim 0 0.6 : newfile : restart
+	go run make-breakbeat-table.go
+
+
+drum:
+	rm -rf output*wav
+	sox drum.wav -r 4400 -c 1 -b 8 0.wav norm lowpass 2200 trim 0 1.2 dither
+	ls -l 0.wav
+	sox 0.wav output.wav trim 0 0.2 : newfile : restart
 	go run make-breakbeat-table.go
 
