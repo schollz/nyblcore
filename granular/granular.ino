@@ -32,10 +32,12 @@ byte thresh_next[GRAINS] = 3;
 byte thresh_nibble[GRAINS];
 int audio_last[GRAINS];
 int audio_next[GRAINS];
+word audio_diff[GRAINS];
 char audio_add[GRAINS];
-word sample_num[GRAINS];
 word sample_start[GRAINS];
-word sample_count[GRAINS];
+byte env_cur[GRAINS];
+byte env_step[GRAINS];
+bool env_rev[GRAINS];
 byte audio_now[GRAINS];
 byte audio_played;
 byte tempo[GRAINS];
@@ -101,39 +103,55 @@ void Loop() {
 
   audio_final = 0;
   for (byte g=0;g<GRAINS;g++) {
-    if (phase_sample_last[g] != phase_sample[g]) {
-      audio_last[g] = ((int)pgm_read_byte(SAMPLE_TABLE + phase_sample[g])) << SHIFTY;
-      audio_next[g] = ((int)pgm_read_byte(SAMPLE_TABLE + phase_sample[g] + 1)) << SHIFTY;
-      audio_next[g] = (audio_next[g] - audio_last[g]) / ((int)(thresh_next[g] - thresh_counter[g]));
-      audio_add[g] = 0;
-      phase_sample_last[g] = phase_sample[g];
-    }
-
-    audio_now[g]= (audio_last[g] + audio_add[g]);
-    audio_add[g] = audio_add[g] + audio_next[g];
-    audio_final += audio_now[g];
-
+    // next sample
     thresh_counter[g]++;
+
+    // update the sample
     if (thresh_counter[g] == thresh_next[g]) {
       thresh_counter[g] = 0;
       thresh_nibble[g]++;
       if (thresh_nibble[g] >= 6) {
         thresh_nibble[g] = 0;
       }
-      thresh_next = tempo_steps[tempo][thresh_nibble[g] / 2];
+      thresh_next[g] = tempo_steps[tempo][thresh_nibble[g] / 2];
       if (thresh_nibble[g] % 2 == 0) {
         thresh_next[g] = (byte)(thresh_next[g] & 0xF0) >> 4;
       } else {
         thresh_next[g] = (byte)(thresh_next[g] & 0x0F);
       }
-      sample_count[g] += 1;
       phase_sample[g] += 1;
       if (phase_sample[g] > NUM_SAMPLES) {
         phase_sample[g] = 0;
       } else if (phase_sample[g] < 0) {
         phase_sample[g] = NUM_SAMPLES;
       }
+      audio_last[g] = audio_next[g];
+      audio_next[g] = ((int)pgm_read_byte(SAMPLE_TABLE + phase_sample[g])) << SHIFTY;
+      audio_diff[g] = (audio_next[g] - audio_last[g]) / ((int)(thresh_next[g] - thresh_counter[g]));
+      audio_add[g] = 0;
+
+      if (env_rev[g]) {
+        env_cur[g]-=env_step[g];
+      } else {
+        env_cur[g]+=env_step[g];
+      }
+      if (env_cur[g]==0) {
+        env_rev[g]=false; // go forward
+        // TODO: choose new location to start grain?
+      } else if (env_cur[g]==250) {
+        env_rev[g]=true;
+      }
     }
+
+    // add to the current audio
+    audio_now[g] = audio_last[g] + audio_add[g];
+
+    // update the final audio
+    audio_final += (audio_now[g] * env_rev[g])/255;
+
+    // linear interpolation
+    audio_add[g] += audio_diff[g];
+
   }
 
 
