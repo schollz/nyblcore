@@ -114,7 +114,7 @@ func main() {
 		}
 
 		if len(filenames) == 0 {
-			err = fmt.Errorf("no files available")
+			err = fmt.Errorf("must choose at least one audio file")
 			return
 		}
 

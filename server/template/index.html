@@ -105,12 +105,12 @@ form button:active {
 		<label for="image_uploads" style="font-size: 1em; cursor:pointer;">Choose audio files to upload</label>
 		<input type="file" id="image_uploads" name="files" accept=".wav, .mp3, .aif, .ogg, .flac" multiple>
 	</div>
-	<div class="preview">
+	<div class="preview" style="background-color:#fff;">
 		<p>No files currently selected for upload</p>
 	</div>
 	<div>
 		Slices (single files only):
-		<input type="number" name="slices" min="1" max="100" value=1 style="font-size: 1em;"><br>
+		<input type="number" name="slices" min="1" max="100" value=5 style="font-size: 1em;"><br>
 	</div>
 	<div>
 		Crossfade (ms):
@@ -125,7 +125,9 @@ form button:active {
 	{{with .error}}<p class="error">Error: <em>{{.}}</em></p>{{end}}
 	
 	{{ with .code }}
-	<button onclick="copy()">Copy</button><br>
+	<p style="margin-bottom:0;">Code for uploading to ATTiny85 
+	<button onclick="copy()" style="margin-bottom:0.25em; font-size: 1em; cursor:pointer;">Copy</button>
+	</p>
 	<textarea id="textarea" rows=15>{{ . }}</textarea>
 	{{end}}
 	
