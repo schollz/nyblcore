@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -69,7 +68,7 @@ func main() {
 			filename := filepath.Base(file.Filename)
 			if strings.Contains(filename, ".wav") || strings.Contains(filename, ".mp3") || strings.Contains(filename, ".flac") || strings.Contains(filename, ".aif") || strings.Contains(filename, ".ogg") {
 				// open a temp file to save the uploaded file
-				ftemp, err := ioutil.TempFile(tempdir, "*"+filepath.Ext(filename))
+				ftemp, err := os.CreateTemp("", "nyblcore*"+filepath.Ext(filename))
 				if err != nil {
 					log.Error(err)
 					return
@@ -84,7 +83,7 @@ func main() {
 				}
 
 				// open a tempfile to save the resampled version
-				ftemp2, err := ioutil.TempFile(tempdir, "*"+filepath.Ext(filename))
+				ftemp2, err := os.CreateTemp("", "nyblcore*.wav")
 				if err != nil {
 					log.Error(err)
 					return
@@ -122,7 +121,7 @@ func main() {
 			}
 
 			// create a tempfile to store it
-			ftemp, err := ioutil.TempFile(tempdir, "*.wav")
+			ftemp, err := os.CreateTemp("", "nyblcore*.wav")
 			if err != nil {
 				return
 			}
