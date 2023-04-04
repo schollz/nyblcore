@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/schollz/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/youpy/go-wav"
 )
@@ -19,6 +20,8 @@ import (
 var Version = "v0.5.0"
 
 func main() {
+	log.SetLevel("trace")
+
 	router := gin.Default()
 	// Set a lower memory limit for multipart forms (default is 32 MiB)
 	router.MaxMultipartMemory = 8 << 20 // 8 MiB
@@ -42,7 +45,7 @@ func main() {
 
 			}
 			for _, f := range split_files {
-				fmt.Printf("removing %s", f)
+				log.Tracef("removing %s", f)
 				//os.Remove(f)
 			}
 		}()
@@ -57,62 +60,97 @@ func main() {
 		if err != nil {
 			return
 		}
+
+		// create a temp directory
+		tempdir, err := ioutil.TempDir("nyblcore", "/tmp/")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer os.RemoveAll(tempdir)
+
 		files := form.File["files"]
 
-		var cmd1 []string
+		var filenames []string
 		for _, file := range files {
-			filename := filepath.Base(file.Filename)
+			filename := path.Join(tempdir,filepath.Base(file.Filename))
 			if strings.Contains(filename, ".wav") || strings.Contains(filename, ".mp3") || strings.Contains(filename, ".flac") || strings.Contains(filename, ".aif") || strings.Contains(filename, ".ogg") {
-				cmd1 = append(cmd1, filename)
-				if err := c.SaveUploadedFile(file, filename); err != nil {
-					c.String(http.StatusBadRequest, "upload file err: %s", err.Error())
+				// open a temp file to save the uploaded file
+				ftemp, err := ioutil.TempFile(tempdir, "*"+filepath.Ext(filename))
+				if err != nil {
 					return
 				}
+				ftemp.Close()
+				defer os.Remove(ftemp.Name())
+
+				// save the uploaded file
+				if err := c.SaveUploadedFile(file, ftemp.Name()); err != nil {
+					return
+				}
+
+				// open a tempfile to save the resampled version
+				ftemp2, err := ioutil.TempFile(tempdir, "*"+filepath.Ext(filename))
+				if err != nil {
+					return
+				}
+				defer os.Remove(ftemp2.Name())
+
+				// convert the incoming file to lower sample rate
+				cmdString := []string{"sox",ftemp.Name(), "-r", "4400", "-c", "1", "-b", "8", ftemp2.Name(), "norm", "lowpass", "2200", "trim", "0", "1.2", "dither"}
+				cmd := exec.Command(cmdString[0],cmdString[1]...)
+				var output []byte
+				output, err = cmd.CombinedOutput()
+				if err != nil {
+					return
+				}
+		
+				// append it to the list
+				log.Tracef("adding '%s' ('%s') to the list",ftemp2.Name(),file.Filename)
+				filenames = append(filenames, ftemp2.Name())
 			}
 		}
 
-		filenames := cmd1
-		if slices == 0 {
-			slices = len(cmd1)
-		}
-		cmd1 = append(cmd1, []string{"/tmp/0.wav"}...)
-		cmd := exec.Command("sox", cmd1...)
-		output, err := cmd.CombinedOutput()
-		if err != nil {
+		if len(filenames) == 0 {
+			err = fmt.Errorf("no files available")
 			return
 		}
-		fmt.Println("sox", cmd1)
 
-		cmd2 := []string{"/tmp/0.wav", "-r", "4400", "-c", "1", "-b", "8", "/tmp/1.wav", "norm", "lowpass", "2200", "trim", "0", "1.2", "dither"}
-		cmd = exec.Command("sox", cmd2...)
-		output, err = cmd.CombinedOutput()
-		if err != nil {
-			return
-		}
-		fmt.Println("sox", cmd2)
-		fmt.Println(string(output))
+		// take action based on the number of input files
+		if len(filenames)==1 {
+			// split the file if its a single file
+			samples, err := numSamples(filenames[0])
+			if err != nil {
+				return
+			}
 
-		// split the file
-		samples, err := numSamples("/tmp/1.wav")
-		if err != nil {
-			return
+			// create a tempfile to store it
+			ftemp, err := ioutil.TempFile(tempdir, "*.wav")
+			if err != nil {
+				return
+			}
+			ftemp.Close()
+			defer os.Remove(ftemp.Name())
+
+			cmd3 := []string{filenames[0], ftemp.Name(), "trim", "0", fmt.Sprintf("%ds", samples/slices), ":", "newfile", ":", "restart"}
+			if crossfade > 0 {
+				cmd3 = []string{filenames[0], ftemp.Name(), "trim", "0", fmt.Sprintf("%ds", samples/slices), "fade", "h", crossfadeTimeString, fmt.Sprintf("%ds", samples/slices), crossfadeTimeString, ":", "newfile", ":", "restart"}
+			}
+			log.Trace(cmd3)
+			cmd := exec.Command("sox", cmd3...)
+			var output []byte
+			output, err = cmd.CombinedOutput()
+			if err != nil {
+				err = fmt.Errorf("could not split file: %s", err.Error())
+				return
+			}
+			split_files, err = filepath.Glob(strings.Replace(ftemp.Name(),".wav","*",-1))
+			if err != nil {
+				return
+			}
+		} else {
+			split_files = filenames
 		}
-		cmd3 := []string{"/tmp/1.wav", "/tmp/ready.wav", "trim", "0", fmt.Sprintf("%ds", samples/slices), ":", "newfile", ":", "restart"}
-		if crossfade > 0 {
-			cmd3 = []string{"/tmp/1.wav", "/tmp/ready.wav", "trim", "0", fmt.Sprintf("%ds", samples/slices), "fade", "h", crossfadeTimeString, fmt.Sprintf("%ds", samples/slices), crossfadeTimeString, ":", "newfile", ":", "restart"}
-		}
-		fmt.Println(cmd3)
-		cmd = exec.Command("sox", cmd3...)
-		output, err = cmd.CombinedOutput()
-		if err != nil {
-			err = fmt.Errorf("could not split file: %s", err.Error())
-			return
-		}
-		split_files, err = filepath.Glob("/tmp/ready*wav")
-		if err != nil {
-			return
-		}
-		fmt.Println(split_files)
+
+		log.Trace(split_files)
 
 		bs, err := os.ReadFile("../nyblcore/nyblcore.ino")
 		if err != nil {
@@ -149,7 +187,7 @@ func numSamples(fname string) (samples int, err error) {
 	if err != nil {
 		return
 	}
-	fmt.Println(string(output))
+	log.Trace(string(output))
 	match := r.FindString(string(output))
 	match2 := r2.FindString(match)
 	samples, err = strconv.Atoi(match2)
