@@ -42,14 +42,15 @@ func main() {
 
 			}
 			for _, f := range split_files {
-				os.Remove(f)
+				fmt.Printf("removing %s", f)
+				//os.Remove(f)
 			}
 		}()
 		slicesString := c.PostForm("slices")
 		slices, _ := strconv.Atoi(slicesString)
 		crossfadeString := c.PostForm("crossfade")
 		crossfade, _ := strconv.Atoi(crossfadeString)
-		crossfadeTimeString := fmt.Sprintf("%2.6f",float64(crossfade)/1000.0)
+		crossfadeTimeString := fmt.Sprintf("%2.6f", float64(crossfade)/1000.0)
 
 		// Multipart form
 		form, err := c.MultipartForm()
@@ -97,8 +98,8 @@ func main() {
 			return
 		}
 		cmd3 := []string{"/tmp/1.wav", "/tmp/ready.wav", "trim", "0", fmt.Sprintf("%ds", samples/slices), ":", "newfile", ":", "restart"}
-		if crossfade>0 {
-			cmd3 = []string{"/tmp/1.wav", "/tmp/ready.wav", "trim", "0", fmt.Sprintf("%ds", samples/slices),"fade","h",crossfadeTimeString, fmt.Sprintf("%ds", samples/slices),crossfadeTimeString,":", "newfile", ":", "restart"}
+		if crossfade > 0 {
+			cmd3 = []string{"/tmp/1.wav", "/tmp/ready.wav", "trim", "0", fmt.Sprintf("%ds", samples/slices), "fade", "h", crossfadeTimeString, fmt.Sprintf("%ds", samples/slices), crossfadeTimeString, ":", "newfile", ":", "restart"}
 		}
 		fmt.Println(cmd3)
 		cmd = exec.Command("sox", cmd3...)
