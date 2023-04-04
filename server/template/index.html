@@ -3,50 +3,186 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta charset="utf-8">
-<title>Create nyblcore</title>
+<title>nyblcore {{.version}}</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Martian+Mono&family=Roboto+Mono:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Martian+Mono&family=Roboto+Mono:wght@400;500;600;700&display=swap');
 
 body {
-	max-width: 800px;
-	    margin: auto;
-	        padding: 1em;
+  font-size: 1.1em;
+  max-width: 800px;
+  margin: auto;
+  padding: 1em;
 }
 
- body, p, textarea, button,input {
-	 font-family: 'Martian Mono', monospace;
-	 font-family: 'Roboto Mono', monospace;
- }
- textarea {
-	 width:100%;
-	 background: #fefefe;
-	 padding:0.5em;
- }
+body,
+p,
+textarea,
+button,
+input {
+  font-family: 'Martian Mono', monospace;
+  font-family: 'Roboto Mono', monospace;
+}
 
- .output {
-	   margin: 1rem 0;
- }
+textarea {
+  width: 100%;
+  background: #eee;
+  padding: 0.5em;
+}
+
+.output {
+  margin: 1rem 0;
+}
+
+html {
+  font-family: sans-serif;
+}
+
+form {
+  background: #eee;
+  margin: 0 auto;
+  padding: 20px;
+  border: 1px solid black;
+}
+
+form ol {
+  padding-left: 0;
+}
+
+form li,
+div>p {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  list-style-type: none;
+  border: 1px solid black;
+}
+
+form img {
+  height: 64px;
+  order: 1;
+}
+
+form p {
+  line-height: 32px;
+  padding-left: 10px;
+}
+
+form label,
+form button, form input {
+  background-color: #7F9CCB;
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: 1px ridge black;
+  font-size: 0.8rem;
+  height: auto;
+}
+
+form label:hover,
+form button:hover {
+  background-color: #2D5BA3;
+  color: white;
+}
+
+form label:active,
+form button:active {
+  background-color: #0D3F8F;
+  color: white;
+}
 
 </style>
 </head>
 <body>
-	<h1>nyblcore {{.version}} code generator</h1>
-<form action="/" method="post" enctype="multipart/form-data">
-	Slices: <input type="number" name="slices" min="1" max="100" value=1><br>
-<input id="myfiles" type="file" name="files" multiple><br>
-<br>
-<input type="submit" value="Submit"></form>
-
-<p class="message">{{ .message }}</p>
-<p class="error">{{.error}}</p>
-
-{{ with .code }}
-<button onclick="copy()">Copy</button><br>
-<textarea id="textarea" rows=15>
-{{ . }}</textarea>
-{{end}} 
+	<h2 style="margin-top:0;">
+		nyblcore {{.version}}
+	</h2>
+	
+	<form action="/" method="post" enctype="multipart/form-data">
+	<div>
+		<label for="image_uploads" style="font-size: 1em; cursor:pointer;">Choose audio files to upload</label>
+		<input type="file" id="image_uploads" name="files" accept=".wav, .mp3, .aif, .ogg, .flac" multiple>
+	</div>
+	<div class="preview">
+		<p>No files currently selected for upload</p>
+	</div>
+	<div>
+		Slices:
+		<input type="number" name="slices" min="1" max="100" value=1 style="font-size: 1em;"><br>
+	</div>
+	<div style="padding-top:1em;">
+		<button style="font-size: 1em; cursor:pointer;">Submit</button>
+	</div>
+	</form>
+	
+	<p class="message">{{ .message }}</p>
+	<p class="error">{{.error}}</p>
+	
+	{{ with .code }}
+	<button onclick="copy()">Copy</button><br>
+	<textarea id="textarea" rows=15>
+	{{ . }}</textarea>
+	{{end}}
+	
 
 <script>
+const input = document.querySelector('input');
+const preview = document.querySelector('.preview');
+
+input.style.opacity = 0;
+
+input.addEventListener('change', updateImageDisplay);
+
+function updateImageDisplay() {
+while (preview.firstChild) {
+	preview.removeChild(preview.firstChild);
+}
+
+const curFiles = input.files;
+if (curFiles.length === 0) {
+	const para = document.createElement('p');
+	para.textContent = 'No files currently selected for upload';
+	preview.appendChild(para);
+} else {
+	const list = document.createElement('ol');
+	preview.appendChild(list);
+
+	for (const file of curFiles) {
+	const listItem = document.createElement('li');
+	const para = document.createElement('p');
+
+	if (validFileType(file)) {
+		para.textContent = `${file.name}, file size ${returnFileSize(file.size)}.`;
+		listItem.appendChild(para);
+	} else {
+		para.textContent = `File name ${file.name}: Not a valid file type. Update your selection.`;
+		listItem.appendChild(para);
+	}
+
+	list.appendChild(listItem);
+	}
+}
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types
+const fileTypes = [
+'audio/wav',
+'audio/flac',
+'audio/ogg',
+'audio/mpeg',
+];
+
+function validFileType(file) {
+return fileTypes.includes(file.type);
+}
+
+function returnFileSize(number) {
+if (number < 1024) {
+	return number + 'bytes';
+} else if (number > 1024 && number < 1048576) {
+	return (number / 1024).toFixed(1) + 'KB';
+} else if (number > 1048576) {
+	return (number / 1048576).toFixed(1) + 'MB';
+}
+}
 
 function copy() {
   let textarea = document.getElementById("textarea");
