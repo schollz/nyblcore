@@ -1,9 +1,4 @@
-// Sampler Player
-// InA() -> selects sample
-// InB() -> gates
-// InK() -> also selects sample
-
-// make breakbeat
+// SAMPLETABLE
 
 #include <EEPROM.h>
 
@@ -433,7 +428,6 @@ byte RandomByte() {
 }
 
 
-// SAMPLETABLE
 
 #define SHIFTY 6
 #define PARM1 30
