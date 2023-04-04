@@ -46,7 +46,7 @@ func main() {
 			}
 			for _, f := range split_files {
 				log.Tracef("removing %s", f)
-				//os.Remove(f)
+				os.Remove(f)
 			}
 		}()
 		slicesString := c.PostForm("slices")
@@ -64,6 +64,7 @@ func main() {
 
 		files := form.File["files"]
 		var filenames []string
+		var originalFilenames []string
 		for _, file := range files {
 			filename := filepath.Base(file.Filename)
 			if strings.Contains(filename, ".wav") || strings.Contains(filename, ".mp3") || strings.Contains(filename, ".flac") || strings.Contains(filename, ".aif") || strings.Contains(filename, ".ogg") {
@@ -100,10 +101,12 @@ func main() {
 					log.Error(err)
 					return
 				}
+				log.Tracef("%s", output)
 
 				// append it to the list
 				log.Tracef("adding '%s' ('%s') to the list", ftemp2.Name(), file.Filename)
 				filenames = append(filenames, ftemp2.Name())
+				originalFilenames = append(originalFilenames, filename)
 			}
 		}
 
@@ -121,12 +124,12 @@ func main() {
 			}
 
 			// create a tempfile to store it
-			ftemp, err := os.CreateTemp("", "nyblcore*.wav")
+			ftemp, err := os.CreateTemp("", "nyblcore_split*.wav")
 			if err != nil {
 				return
 			}
 			ftemp.Close()
-			defer os.Remove(ftemp.Name())
+			os.Remove(ftemp.Name())
 
 			cmd3 := []string{filenames[0], ftemp.Name(), "trim", "0", fmt.Sprintf("%ds", samples/slices), ":", "newfile", ":", "restart"}
 			if crossfade > 0 {
@@ -148,7 +151,7 @@ func main() {
 			split_files = filenames
 		}
 
-		log.Trace(split_files)
+		log.Tracef("split_files: %+v", split_files)
 
 		bs, err := os.ReadFile("../nyblcore/nyblcore.ino")
 		if err != nil {
@@ -165,7 +168,7 @@ func main() {
 		converted = strings.Replace(converted, "// SAMPLETABLE", data, 1)
 
 		converted = `// ` + fmt.Sprintf("nyblcore v0.5 generated %s\n", time.Now()) +
-			`// ` + fmt.Sprintf("%s\n", strings.Join(filenames, " ")) +
+			`// ` + fmt.Sprintf("%s\n", strings.Join(originalFilenames, " ")) +
 			`// ` + fmt.Sprintf("%d slices\n\n\n", slices) +
 			converted
 

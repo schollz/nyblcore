@@ -122,7 +122,7 @@ form button:active {
 	</form>
 	
 	<p class="message">{{ .message }}</p>
-	<p class="error">Error: <em>{{.error}}</em></p>
+	{{with .error}}<p class="error">Error: <em>{{.}}</em></p>{{end}}
 	
 	{{ with .code }}
 	<button onclick="copy()">Copy</button><br>
