@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -12,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/schollz/logger"
 	"github.com/gin-gonic/gin"
+	log "github.com/schollz/logger"
 	"github.com/youpy/go-wav"
 )
 
@@ -58,25 +59,19 @@ func main() {
 		// Multipart form
 		form, err := c.MultipartForm()
 		if err != nil {
+			log.Error(err)
 			return
 		}
 
-		// create a temp directory
-		tempdir, err := ioutil.TempDir("nyblcore", "/tmp/")
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer os.RemoveAll(tempdir)
-
 		files := form.File["files"]
-
 		var filenames []string
 		for _, file := range files {
-			filename := path.Join(tempdir,filepath.Base(file.Filename))
+			filename := filepath.Base(file.Filename)
 			if strings.Contains(filename, ".wav") || strings.Contains(filename, ".mp3") || strings.Contains(filename, ".flac") || strings.Contains(filename, ".aif") || strings.Contains(filename, ".ogg") {
 				// open a temp file to save the uploaded file
 				ftemp, err := ioutil.TempFile(tempdir, "*"+filepath.Ext(filename))
 				if err != nil {
+					log.Error(err)
 					return
 				}
 				ftemp.Close()
@@ -84,27 +79,31 @@ func main() {
 
 				// save the uploaded file
 				if err := c.SaveUploadedFile(file, ftemp.Name()); err != nil {
+					log.Error(err)
 					return
 				}
 
 				// open a tempfile to save the resampled version
 				ftemp2, err := ioutil.TempFile(tempdir, "*"+filepath.Ext(filename))
 				if err != nil {
+					log.Error(err)
 					return
 				}
 				defer os.Remove(ftemp2.Name())
 
 				// convert the incoming file to lower sample rate
-				cmdString := []string{"sox",ftemp.Name(), "-r", "4400", "-c", "1", "-b", "8", ftemp2.Name(), "norm", "lowpass", "2200", "trim", "0", "1.2", "dither"}
-				cmd := exec.Command(cmdString[0],cmdString[1]...)
+				cmdString := []string{"sox", ftemp.Name(), "-r", "4400", "-c", "1", "-b", "8", ftemp2.Name(), "norm", "lowpass", "2200", "trim", "0", "1.2", "dither"}
+				cmd := exec.Command(cmdString[0], cmdString[1:]...)
 				var output []byte
 				output, err = cmd.CombinedOutput()
 				if err != nil {
+					err = fmt.Errorf("error: '%s'\n\n%s", err.Error(), output)
+					log.Error(err)
 					return
 				}
-		
+
 				// append it to the list
-				log.Tracef("adding '%s' ('%s') to the list",ftemp2.Name(),file.Filename)
+				log.Tracef("adding '%s' ('%s') to the list", ftemp2.Name(), file.Filename)
 				filenames = append(filenames, ftemp2.Name())
 			}
 		}
@@ -115,7 +114,7 @@ func main() {
 		}
 
 		// take action based on the number of input files
-		if len(filenames)==1 {
+		if len(filenames) == 1 {
 			// split the file if its a single file
 			samples, err := numSamples(filenames[0])
 			if err != nil {
@@ -139,10 +138,10 @@ func main() {
 			var output []byte
 			output, err = cmd.CombinedOutput()
 			if err != nil {
-				err = fmt.Errorf("could not split file: %s", err.Error())
+				err = fmt.Errorf("could not split file: %s\n\n%s", err.Error(), output)
 				return
 			}
-			split_files, err = filepath.Glob(strings.Replace(ftemp.Name(),".wav","*",-1))
+			split_files, err = filepath.Glob(strings.Replace(ftemp.Name(), ".wav", "*", -1))
 			if err != nil {
 				return
 			}

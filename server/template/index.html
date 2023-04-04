@@ -89,6 +89,10 @@ form button:active {
   color: white;
 }
 
+		.error {
+			color: #ff0000;
+		}
+
 </style>
 </head>
 <body>
@@ -118,7 +122,7 @@ form button:active {
 	</form>
 	
 	<p class="message">{{ .message }}</p>
-	<p class="error">{{.error}}</p>
+	<p class="error">Error: <em>{{.error}}</em></p>
 	
 	{{ with .code }}
 	<button onclick="copy()">Copy</button><br>
