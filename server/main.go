@@ -26,6 +26,7 @@ func main() {
 	// Set a lower memory limit for multipart forms (default is 32 MiB)
 	router.MaxMultipartMemory = 8 << 20 // 8 MiB
 	router.LoadHTMLGlob("template/*")
+	router.Static("/static", "./static")
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"version": Version,
@@ -121,7 +122,7 @@ func main() {
 		// take action based on the number of input files
 		if len(filenames) == 1 {
 			// split the file if its a single file
-			samples, err := numSamples(filenames[0])
+			samples, _, err := numSamples(filenames[0])
 			if err != nil {
 				return
 			}
@@ -168,6 +169,16 @@ func main() {
 			return
 		}
 
+		// draw final files
+		imgFile, err := drawFiles(split_files)
+		if err != nil {
+			return
+		}
+		go func() {
+			time.Sleep(30 * time.Second)
+			os.Remove(imgFile)
+		}()
+
 		converted = strings.Replace(converted, "// SAMPLETABLE", data, 1)
 
 		converted = `// ` + fmt.Sprintf("nyblcore v0.5 generated %s\n", time.Now()) +
@@ -178,14 +189,61 @@ func main() {
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"version": Version,
 			"code":    converted,
+			"image":   imgFile,
 		})
 	})
 	router.Run(":8080")
 }
 
-func numSamples(fname string) (samples int, err error) {
+func drawFiles(fnames []string) (imgFile string, err error) {
+	ftemp, err := os.CreateTemp("", "nyblcore_merge*.wav")
+	if err != nil {
+		return
+	}
+	ftemp.Close()
+	os.Remove(ftemp.Name())
+	defer os.Remove(ftemp.Name())
+	cmd := exec.Command("sox", append(fnames, ftemp.Name())...)
+	var output []byte
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		log.Errorf("output: %s", output)
+		return
+	}
+	log.Tracef("created merged file: %s", ftemp.Name())
+
+	samples, sampleRate, err := numSamples(ftemp.Name())
+	if err != nil {
+		return
+	}
+
+	duration := float64(samples) / float64(sampleRate)
+
+	log.Trace("sample info", samples, sampleRate)
+
+	imtemp, err := os.CreateTemp("./static", "img*.png")
+	imtemp.Close()
+	os.Remove(imtemp.Name())
+
+	width := 600.0
+	height := width / 4.0
+	cmd = exec.Command("audiowaveform", "-i", ftemp.Name(), "-o", imtemp.Name(), "-w", fmt.Sprintf("%2.0f", width), "-h", fmt.Sprintf("%2.0f", height), "--pixels-per-second", fmt.Sprintf("%2.0f", width/duration), "--no-axis-labels", "--waveform-color", "0D3F8F", "", "--background-color", "ffffff00", "--compression", "9")
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		log.Errorf("output: %s", output)
+		return
+	}
+	log.Tracef("created image file: %s", imtemp.Name())
+	imgFile = filepath.Base(imtemp.Name())
+
+	return
+}
+
+func numSamples(fname string) (samples int, sampleRate int, err error) {
 	r, _ := regexp.Compile(`(\d+) samples`)
 	r2, _ := regexp.Compile(`(\d+)`)
+	r3, _ := regexp.Compile(`Sample Rate\s+:\s+(\d+)`)
+
 	cmd := exec.Command("sox", "--i", fname)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -195,6 +253,10 @@ func numSamples(fname string) (samples int, err error) {
 	match := r.FindString(string(output))
 	match2 := r2.FindString(match)
 	samples, err = strconv.Atoi(match2)
+
+	match = r3.FindString(string(output))
+	match2 = r2.FindString(match)
+	sampleRate, err = strconv.Atoi(match2)
 
 	return
 }

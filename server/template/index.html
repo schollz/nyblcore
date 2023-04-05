@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta charset="utf-8">
-<title>nyblcore {{.version}}</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Martian+Mono&family=Roboto+Mono:wght@400;500;600;700&display=swap');
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8">
+    <title>nyblcore {{.version}}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Martian+Mono&family=Roboto+Mono:wght@400;500;600;700&display=swap');
 
 body {
   font-size: 1.1em;
@@ -95,109 +96,109 @@ form button:active {
 
 </style>
 </head>
+
 <body>
-	<h2 style="margin-top:0;">
-		nyblcore {{.version}}
-	</h2>
-	
-	<form action="/" method="post" enctype="multipart/form-data">
-	<div>
-		<label for="image_uploads" style="font-size: 1em; cursor:pointer;">Choose audio files to upload</label>
-		<input type="file" id="image_uploads" name="files" accept=".wav, .aif, .ogg, .flac" multiple>
-	</div>
-	<div class="preview" style="background-color:#fff;">
-		<p>No files currently selected for upload</p>
-	</div>
-	<div>
-		Slices (single files only):
-		<input type="number" name="slices" min="1" max="100" value=5 style="font-size: 1em;"><br>
-	</div>
-	<div>
-		Crossfade (ms):
-		<input type="number" name="crossfade" min="0" max="1000" value=0 style="font-size: 1em;"><br>
-	</div>
-	<div style="padding-top:1em;">
-		<button style="font-size: 1em; cursor:pointer;">Submit</button>
-	</div>
-	</form>
-	
-	<p class="message">{{ .message }}</p>
-	{{with .error}}<p class="error">Error: <em>{{.}}</em></p>{{end}}
-	
-	{{ with .code }}
-	<p style="margin-bottom:0;">Code for uploading to ATTiny85 
-	<button onclick="copy()" style="margin-bottom:0.25em; font-size: 1em; cursor:pointer;">Copy</button>
-	</p>
-	<textarea id="textarea" rows=15>{{ . }}</textarea>
-	{{end}}
-	
+    <h2 style="margin-top:0;">
+        nyblcore {{.version}}
+    </h2>
+    <form action="/" method="post" enctype="multipart/form-data">
+        <div>
+            <label for="image_uploads" style="font-size: 1em; cursor:pointer;">Choose audio files to upload</label>
+            <input type="file" id="image_uploads" name="files" accept=".wav, .aif, .ogg, .flac" multiple>
+        </div>
+        <div class="preview" style="background-color:#fff;">
+            <p>No files currently selected for upload</p>
+        </div>
+        <div>
+            Slices (single files only):
+            <input type="number" name="slices" min="1" max="100" value=5 style="font-size: 1em;"><br>
+        </div>
+        <div style="padding-top:0.25em;">
+            Crossfade (ms):
+            <input type="number" name="crossfade" min="0" max="1000" value=0 style="font-size: 1em;"><br>
+        </div>
+        <div style="padding-top:1em;">
+            <button style="font-size: 1em; cursor:pointer;">Submit</button>
+        </div>
+    </form>
+    <p class="message">{{ .message }}</p>
+    {{with .error}}<p class="error">Error: <em>{{.}}</em></p>{{end}}
+    {{ with .image }}
+    <img src="/static/{{.}}" style="width:100%;">
+    {{end}}
+    {{ with .code }}
+    <p style="margin-bottom:0;">Code for uploading to ATTiny85
+        <button onclick="copy()" style="margin-bottom:0.25em; font-size: 1em; cursor:pointer;">Copy</button>
+    </p>
+    <textarea id="textarea" rows=15>{{ . }}</textarea>
+    {{end}}
+    <script>
+    const input = document.querySelector('input');
+    const preview = document.querySelector('.preview');
 
-<script>
-const input = document.querySelector('input');
-const preview = document.querySelector('.preview');
+    input.style.opacity = 0;
 
-input.style.opacity = 0;
+    input.addEventListener('change', updateImageDisplay);
 
-input.addEventListener('change', updateImageDisplay);
+    function updateImageDisplay() {
+        while (preview.firstChild) {
+            preview.removeChild(preview.firstChild);
+        }
 
-function updateImageDisplay() {
-while (preview.firstChild) {
-	preview.removeChild(preview.firstChild);
-}
+        const curFiles = input.files;
+        if (curFiles.length === 0) {
+            const para = document.createElement('p');
+            para.textContent = 'No files currently selected for upload';
+            preview.appendChild(para);
+        } else {
+            const list = document.createElement('ol');
+            preview.appendChild(list);
 
-const curFiles = input.files;
-if (curFiles.length === 0) {
-	const para = document.createElement('p');
-	para.textContent = 'No files currently selected for upload';
-	preview.appendChild(para);
-} else {
-	const list = document.createElement('ol');
-	preview.appendChild(list);
+            for (const file of curFiles) {
+                const listItem = document.createElement('li');
+                const para = document.createElement('p');
 
-	for (const file of curFiles) {
-	const listItem = document.createElement('li');
-	const para = document.createElement('p');
+                if (validFileType(file)) {
+                    para.textContent = `${file.name}, file size ${returnFileSize(file.size)}.`;
+                    listItem.appendChild(para);
+                } else {
+                    para.textContent = `File name ${file.name}: Not a valid file type. Update your selection.`;
+                    listItem.appendChild(para);
+                }
 
-	if (validFileType(file)) {
-		para.textContent = `${file.name}, file size ${returnFileSize(file.size)}.`;
-		listItem.appendChild(para);
-	} else {
-		para.textContent = `File name ${file.name}: Not a valid file type. Update your selection.`;
-		listItem.appendChild(para);
-	}
+                list.appendChild(listItem);
+            }
+        }
+    }
 
-	list.appendChild(listItem);
-	}
-}
-}
+    // https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types
+    const fileTypes = [
+        'audio/wav',
+        'audio/flac',
+        'audio/ogg',
+        'audio/mpeg',
+    ];
 
-// https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types
-const fileTypes = [
-'audio/wav',
-'audio/flac',
-'audio/ogg',
-'audio/mpeg',
-];
+    function validFileType(file) {
+        return fileTypes.includes(file.type);
+    }
 
-function validFileType(file) {
-return fileTypes.includes(file.type);
-}
+    function returnFileSize(number) {
+        if (number < 1024) {
+            return number + 'bytes';
+        } else if (number > 1024 && number < 1048576) {
+            return (number / 1024).toFixed(1) + 'KB';
+        } else if (number > 1048576) {
+            return (number / 1048576).toFixed(1) + 'MB';
+        }
+    }
 
-function returnFileSize(number) {
-if (number < 1024) {
-	return number + 'bytes';
-} else if (number > 1024 && number < 1048576) {
-	return (number / 1024).toFixed(1) + 'KB';
-} else if (number > 1048576) {
-	return (number / 1048576).toFixed(1) + 'MB';
-}
-}
-
-function copy() {
-  let textarea = document.getElementById("textarea");
-  textarea.select();
-  document.execCommand("copy");
-}
-</script>
+    function copy() {
+        let textarea = document.getElementById("textarea");
+        textarea.select();
+        document.execCommand("copy");
+    }
+    </script>
 </body>
+
 </html>
