@@ -164,6 +164,18 @@ func main() {
 
 		converted := string(bs)
 
+		// check that the audio doesn't exceed 1.2 seconds
+		totalTime := 0.0
+		for _, fname := range split_files {
+			s, sr, _ := numSamples(fname)
+			totalTime += (float64(s) / float64(sr))
+		}
+		if totalTime > 1.2 {
+			err = fmt.Errorf("total time is %2.1f seconds which exceeds limit (1.2 seconds)", totalTime)
+			return
+		}
+		log.Tracef("total time: %2.1f", totalTime)
+
 		data, err := convertWavToInts(split_files)
 		if err != nil {
 			return
