@@ -2,12 +2,12 @@
 <p class="message">{{ .message }}</p>
 {{with .error}}<p class="error">Error: <em>{{.}}</em></p>{{end}}
 {{ with .image }}
-<img src="/static/{{.}}" style="width:100%;">
+<img src="https://nyblcore.com/static/{{.}}" style="width:100%;">
 {{end}}
 {{ with .code }}
 <p style="margin-bottom:0;">Code for uploading to ATTiny85
     <button onclick="copy()" style="margin-bottom:0.25em; font-size: 1em; cursor:pointer;">Copy</button>
 </p>
 <textarea id="textarea" rows=15>{{ . }}</textarea>
-<img src="/static/arduino.png">
+<img src="https://nyblcore.com/static/arduino.png">
 {{end}}
