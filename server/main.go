@@ -208,7 +208,7 @@ func main() {
 			"image":   imgFile,
 		})
 	})
-	router.Run(":8080")
+	router.Run(":8731")
 }
 
 func drawFiles(fnames []string) (imgFile string, err error) {
