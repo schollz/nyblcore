@@ -1,8 +1,9 @@
 module nyblcore
 
-go 1.20
+go 1.19
 
 require (
+	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.9.0
 	github.com/schollz/logger v1.2.0
 	github.com/youpy/go-wav v0.3.2

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	log "github.com/schollz/logger"
 	"github.com/youpy/go-wav"
@@ -23,6 +24,9 @@ func main() {
 	log.SetLevel("trace")
 
 	router := gin.Default()
+	config := cors.DefaultConfig()
+	config.AllowAllOrigins = true
+	router.Use(cors.New(config))
 	// Set a lower memory limit for multipart forms (default is 32 MiB)
 	router.MaxMultipartMemory = 8 << 20 // 8 MiB
 	router.LoadHTMLGlob("template/*")
@@ -198,7 +202,7 @@ func main() {
 			`// ` + fmt.Sprintf("%d slices\n\n\n", slices) +
 			converted
 
-		c.HTML(http.StatusOK, "index.html", gin.H{
+		c.HTML(http.StatusOK, "response.html", gin.H{
 			"version": Version,
 			"code":    converted,
 			"image":   imgFile,
@@ -238,7 +242,7 @@ func drawFiles(fnames []string) (imgFile string, err error) {
 	os.Remove(imtemp.Name())
 
 	width := 600.0
-	height := width / 4.0
+	height := width / 8.0
 	cmd = exec.Command("audiowaveform", "-i", ftemp.Name(), "-o", imtemp.Name(), "-w", fmt.Sprintf("%2.0f", width), "-h", fmt.Sprintf("%2.0f", height), "--pixels-per-second", fmt.Sprintf("%2.0f", width/duration), "--no-axis-labels", "--waveform-color", "0D3F8F", "", "--background-color", "ffffff00", "--compression", "9")
 	output, err = cmd.CombinedOutput()
 	if err != nil {

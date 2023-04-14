@@ -95,15 +95,28 @@ form button:active {
         }
 
 </style>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.3.0/jquery.form.min.js" integrity="sha384-qlmct0AOBiA2VPZkMY3+2WqkHtIQ9lSdAsAn5RUJD/3vA5MKDgSGcdmIv4ycVxyn" crossorigin="anonymous"></script>
+    <script>
+        $(function() {
+       $('#myForm').ajaxForm({
+        target: '#renderedHTML',
+        success: function() {
+            $('#renderedHTML').fadeIn('slow');
+        }
+       });
+     });
+   </script>
 </head>
 
 <body>
     <h2 style="margin-top:0;">
         nyblcore {{.version}}
     </h2>
-    <form action="/" method="post" enctype="multipart/form-data">
+    <span id="renderedHTML"></span>
+    <form id="myForm" method="post" action="/" enctype="multipart/form-data">
         <div>
-            <label for="image_uploads" style="font-size: 1em; cursor:pointer;">Choose audio files to upload</label>
+            <label for="image_uploads" style="font-size: 1em; cursor:pointer;">Choose audio files to upload (up to 1.2 seconds)</label>
             <input type="file" id="image_uploads" name="files" accept=".wav, .aif, .ogg, .flac" multiple>
         </div>
         <div class="preview" style="background-color:#fff;">
@@ -121,18 +134,6 @@ form button:active {
             <button style="font-size: 1em; cursor:pointer;">Submit</button>
         </div>
     </form>
-    <p class="message">{{ .message }}</p>
-    {{with .error}}<p class="error">Error: <em>{{.}}</em></p>{{end}}
-    {{ with .image }}
-    <img src="/static/{{.}}" style="width:100%;">
-    {{end}}
-    {{ with .code }}
-    <p style="margin-bottom:0;">Code for uploading to ATTiny85
-        <button onclick="copy()" style="margin-bottom:0.25em; font-size: 1em; cursor:pointer;">Copy</button>
-    </p>
-    <textarea id="textarea" rows=15>{{ . }}</textarea>
-    <img src="/static/arduino.png">
-    {{end}}
     <script>
     const input = document.querySelector('input');
     const preview = document.querySelector('.preview');
