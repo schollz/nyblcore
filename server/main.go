@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -43,7 +44,7 @@ func main() {
 
 		defer func() {
 			if err != nil {
-				c.HTML(http.StatusOK, "index.html", gin.H{
+				c.HTML(http.StatusOK, "response.html", gin.H{
 					"version": Version,
 					"error":   err.Error(),
 				})
@@ -59,6 +60,10 @@ func main() {
 		crossfadeString := c.PostForm("crossfade")
 		crossfade, _ := strconv.Atoi(crossfadeString)
 		crossfadeTimeString := fmt.Sprintf("%2.6f", float64(crossfade)/1000.0)
+		secondsString := strings.TrimSpace(c.PostForm("seconds"))
+		if secondsString == "" {
+			secondsString = "1.2"
+		}
 
 		// Multipart form
 		form, err := c.MultipartForm()
@@ -97,9 +102,10 @@ func main() {
 				defer os.Remove(ftemp2.Name())
 
 				// convert the incoming file to lower sample rate
-				cmdString := []string{"sox", ftemp.Name(), "-r", "4400", "-c", "1", "-b", "8", ftemp2.Name(), "norm", "lowpass", "2200", "trim", "0", "1.2", "dither"}
+				cmdString := []string{"sox", ftemp.Name(), "-r", "4400", "-c", "1", "-b", "8", ftemp2.Name(), "norm", "lowpass", "2200", "trim", "0", secondsString, "dither"}
+				fmt.Println(cmdString)
 				if len(files) > 1 && crossfade > 0 {
-					cmdString = []string{"sox", ftemp.Name(), "-r", "4400", "-c", "1", "-b", "8", ftemp2.Name(), "norm", "lowpass", "2200", "trim", "0", "1.2", "dither", "fade", "h", crossfadeTimeString, "-0", crossfadeTimeString}
+					cmdString = []string{"sox", ftemp.Name(), "-r", "4400", "-c", "1", "-b", "8", ftemp2.Name(), "norm", "lowpass", "2200", "trim", "0", secondsString, "dither", "fade", "h", crossfadeTimeString, "-0", crossfadeTimeString}
 				}
 				cmd := exec.Command(cmdString[0], cmdString[1:]...)
 				var output []byte
@@ -141,7 +147,7 @@ func main() {
 
 			cmd3 := []string{filenames[0], ftemp.Name(), "trim", "0", fmt.Sprintf("%ds", samples/slices), ":", "newfile", ":", "restart"}
 			if crossfade > 0 {
-				cmd3 = []string{filenames[0], ftemp.Name(), "trim", "0", fmt.Sprintf("%ds", samples/slices), "fade", "h", crossfadeTimeString, fmt.Sprintf("%ds", samples/slices), crossfadeTimeString, ":", "newfile", ":", "restart"}
+				cmd3 = []string{filenames[0], ftemp.Name(), "trim", "0", fmt.Sprintf("%ds", samples/slices-10), "fade", "h", crossfadeTimeString, "-0", crossfadeTimeString, ":", "newfile", ":", "restart"}
 			}
 			log.Trace(cmd3)
 			cmd := exec.Command("sox", cmd3...)
@@ -155,7 +161,9 @@ func main() {
 			if err != nil {
 				return
 			}
+			split_files = split_files[:slices]
 		} else {
+			slices = len(filenames)
 			split_files = filenames
 		}
 
@@ -174,8 +182,8 @@ func main() {
 			s, sr, _ := numSamples(fname)
 			totalTime += (float64(s) / float64(sr))
 		}
-		if totalTime > 1.2 {
-			err = fmt.Errorf("total time is %2.1f seconds which exceeds limit (1.2 seconds)", totalTime)
+		if totalTime > 1.21 {
+			err = fmt.Errorf("total time is %2.3f seconds which exceeds limit (1.2 seconds)", totalTime)
 			return
 		}
 		log.Tracef("total time: %2.1f", totalTime)
@@ -217,8 +225,7 @@ func drawFiles(fnames []string) (imgFile string, err error) {
 		return
 	}
 	ftemp.Close()
-	os.Remove(ftemp.Name())
-	defer os.Remove(ftemp.Name())
+
 	cmd := exec.Command("sox", append(fnames, ftemp.Name())...)
 	var output []byte
 	output, err = cmd.CombinedOutput()
@@ -241,7 +248,7 @@ func drawFiles(fnames []string) (imgFile string, err error) {
 	imtemp.Close()
 	os.Remove(imtemp.Name())
 
-	width := 600.0
+	width := 400.0
 	height := width / 8.0
 	cmd = exec.Command("audiowaveform", "-i", ftemp.Name(), "-o", imtemp.Name(), "-w", fmt.Sprintf("%2.0f", width), "-h", fmt.Sprintf("%2.0f", height), "--pixels-per-second", fmt.Sprintf("%2.0f", width/duration), "--no-axis-labels", "--waveform-color", "0D3F8F", "", "--background-color", "ffffff00", "--compression", "9")
 	output, err = cmd.CombinedOutput()
@@ -251,6 +258,7 @@ func drawFiles(fnames []string) (imgFile string, err error) {
 	}
 	log.Tracef("created image file: %s", imtemp.Name())
 	imgFile = filepath.Base(imtemp.Name())
+	os.Rename(ftemp.Name(), path.Join("./static", imgFile+".wav"))
 
 	return
 }
