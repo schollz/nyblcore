@@ -102,10 +102,10 @@ func main() {
 				defer os.Remove(ftemp2.Name())
 
 				// convert the incoming file to lower sample rate
-				cmdString := []string{"sox", ftemp.Name(), "-r", "4400", "-c", "1", "-b", "8", ftemp2.Name(), "norm", "lowpass", "2200", "trim", "0", secondsString, "dither"}
+				cmdString := []string{"sox", ftemp.Name(), "-r", "4200", "-c", "1", "-b", "8", ftemp2.Name(), "norm", "lowpass", "2200", "trim", "0", secondsString, "dither"}
 				fmt.Println(cmdString)
 				if len(files) > 1 && crossfade > 0 {
-					cmdString = []string{"sox", ftemp.Name(), "-r", "4400", "-c", "1", "-b", "8", ftemp2.Name(), "norm", "lowpass", "2200", "trim", "0", secondsString, "dither", "fade", "h", crossfadeTimeString, "-0", crossfadeTimeString}
+					cmdString = []string{"sox", ftemp.Name(), "-r", "4200", "-c", "1", "-b", "8", ftemp2.Name(), "norm", "lowpass", "2200", "trim", "0", secondsString, "dither", "fade", "h", crossfadeTimeString, "-0", crossfadeTimeString}
 				}
 				cmd := exec.Command(cmdString[0], cmdString[1:]...)
 				var output []byte
