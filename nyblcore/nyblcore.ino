@@ -483,27 +483,28 @@ void Loop() {
   byte knobB = InB();
   if (firstrun) {
     firstrun = false;
-    tempo = eeprom_read_byte((uint8_t *)0);
-    delay(5);
-    volume_reduce = eeprom_read_byte((uint8_t *)2);
-    delay(5);
-    distortion = eeprom_read_byte((uint8_t *)3);
-    delay(5);
-    probability = eeprom_read_byte((uint8_t *)4);
-    delay(5);
-    do_stretchp = eeprom_read_byte((uint8_t *)5);
-    delay(5);
-    do_retriggerp = eeprom_read_byte((uint8_t *)6);
-    delay(5);
-    do_stutterp = eeprom_read_byte((uint8_t *)7);
-    delay(5);
+    if (eeprom_read_byte((uint8_t *)1) == 18) {
+      tempo = eeprom_read_byte((uint8_t *)0);
+      volume_reduce = eeprom_read_byte((uint8_t *)2);
+      distortion = eeprom_read_byte((uint8_t *)3);
+      if (distortion > 55) distortion = 0;
+      probability = eeprom_read_byte((uint8_t *)4);
+      if (probability > 128) probability = 0;
+      do_stretchp = eeprom_read_byte((uint8_t *)5);
+      if (do_stretchp > 128) do_stretchp = 0;
+      do_retriggerp = eeprom_read_byte((uint8_t *)6);
+      if (do_retriggerp > 63) do_retriggerp = 0;
+      do_stutterp = eeprom_read_byte((uint8_t *)7);
+      if (do_stutterp > 63) do_stutterp = 0;
+    } else {
+      eeprom_write_byte((uint8_t *)1, 18);
+    }
     knobA_last = knobA;
     knobK_last = knobK;
     knobB_last = knobB;
   } else if (debounce_eeprom > 0) {
     debounce_eeprom--;
     if (debounce_eeprom == 0) {
-      eeprom_write_byte((uint8_t *)1, 1);
       eeprom_write_byte((uint8_t *)0, tempo);
       eeprom_write_byte((uint8_t *)2, volume_reduce);
       eeprom_write_byte((uint8_t *)3, distortion);
