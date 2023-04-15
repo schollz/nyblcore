@@ -2,7 +2,6 @@
 
 #include <EEPROM.h>
 
-
 #ifndef JERBOA_H_
 #define JERBOA_H_
 
@@ -15,7 +14,7 @@
 #endif
 
 #ifndef WHICH_PWM
-#define WHICH_PWM 1  /* 1 or 4 */
+#define WHICH_PWM 1 /* 1 or 4 */
 #endif
 
 #ifndef WHICH_LED
@@ -47,39 +46,55 @@ void SpinDelay(word n) {
 }
 void SpinDelayFast(word n) {
   for (word i = 0; i < n; i++) {
-      spin_tmp += i;
+    spin_tmp += i;
   }
 }
 
-const PROGMEM char MoctalTick_GapFollows[] = {0/*unused*/,  0,0, 0,0,0, 0,0,1};
+const PROGMEM char MoctalTick_GapFollows[] = {
+    0 /*unused*/, 0, 0, 0, 0, 0, 0, 0, 1};
 
 bool led;
-void LedOn() { led = true; digitalWrite(WHICH_LED, HIGH); }    // Set low bit; other bits are pullups.
-void LedOff() { led = false; digitalWrite(WHICH_LED, LOW); }  // Clear low bit; other bits are pullups.
-void LedToggle() { if (led) LedOff(); else LedOn(); }
-void LedSet(bool value) { if (value) LedOn(); else LedOff(); }
+void LedOn() {
+  led = true;
+  digitalWrite(WHICH_LED, HIGH);
+}  // Set low bit; other bits are pullups.
+void LedOff() {
+  led = false;
+  digitalWrite(WHICH_LED, LOW);
+}  // Clear low bit; other bits are pullups.
+void LedToggle() {
+  if (led)
+    LedOff();
+  else
+    LedOn();
+}
+void LedSet(bool value) {
+  if (value)
+    LedOn();
+  else
+    LedOff();
+}
 
 // Fault(n) stops everything else and makes flashy pulses in groups of n.
 void Fault(byte n) {
-  cli(); // No more interrupts.
+  cli();  // No more interrupts.
   USICR = 0;
   pinMode(WHICH_LED, OUTPUT);
   while (true) {
     for (byte k = 0; k < n; k++) {
-    for (word i = 0; i < 8; i++) {
-      SpinDelay(400);
-    LedOn();
-    SpinDelay(100);
-    LedOff();
-  }
-  SpinDelay(5000);
+      for (word i = 0; i < 8; i++) {
+        SpinDelay(400);
+        LedOn();
+        SpinDelay(100);
+        LedOff();
+      }
+      SpinDelay(5000);
     }
     SpinDelay(8000);
   }
 }
 
 struct MoctalTicker {
-  
   // You must zero these yourself, if not global.
   volatile byte data;     // Number to ouptut.
   volatile byte shifted;  // High bit is output; shifts to the left.
@@ -87,33 +102,31 @@ struct MoctalTicker {
   volatile byte state;    // Counts bits and gaps.
   // volatile byte data_last;
 
-  static void Setup() {
-    pinMode(WHICH_LED, OUTPUT);
-  }  
+  static void Setup() { pinMode(WHICH_LED, OUTPUT); }
 
   void Tick() {
     if (tick == 0) {
       // MOVE
-      if (state==0 || state==8) {
+      if (state == 0 || state == 8) {
         shifted = data;
         state = 1;
       } else {
         shifted <<= 1;
         ++state;
       }
-      
+
       if (shifted & 0x80) {
         tick = 5;  // Long pulse.
       } else {
         tick = 2;  // Short pulse.
       }
-      
-      if (pgm_read_byte(MoctalTick_GapFollows+state)) {
+
+      if (pgm_read_byte(MoctalTick_GapFollows + state)) {
         tick += 2;  // Pulse followed by longer gap.
       }
     }
-    
-    if (tick > (pgm_read_byte(MoctalTick_GapFollows+state) ? 3 : 1)) {
+
+    if (tick > (pgm_read_byte(MoctalTick_GapFollows + state) ? 3 : 1)) {
       LedOn();
     } else {
       LedOff();
@@ -127,27 +140,28 @@ MoctalTicker moc;
 struct FastPwm1Base {
   static void SetupPLL() {
     // de https://github.com/viking/attiny85-player //
-    PLLCSR |= _BV(PLLE);               // Enable 64 MHz PLL (p94)
-    SpinDelay(1); /// delayMicroseconds(100);            // Stabilize
-    while(!(PLLCSR & _BV(PLOCK)));     // Wait for it... (p94)
-    PLLCSR |= _BV(PCKE);               // Timer1 source = PLL
+    PLLCSR |= _BV(PLLE);  // Enable 64 MHz PLL (p94)
+    SpinDelay(1);         /// delayMicroseconds(100);            // Stabilize
+    while (!(PLLCSR & _BV(PLOCK)))
+      ;                   // Wait for it... (p94)
+    PLLCSR |= _BV(PCKE);  // Timer1 source = PLL
   };
 };
 struct FastPwm1A : public FastPwm1Base {
   static void Setup() {
     SetupPLL();
-  
-    // Set up Timer/Counter1 for PWM output
-    TIMSK  = 0;                        // Timer interrupts OFF (p92)
-    TCCR1  = _BV(PWM1A)                // Pulse Width Modulator A Enable. (p89)
-           | _BV(COM1A1)               // Clear OC1A on match; set on count $00.
-           | _BV(CS10);                // 1:1 prescale (p89)
-    GTCCR  = 0;                        // Do not enable PW Modulater B. (p90)
-    OCR1C  = 255;                      // Full 8-bit PWM cycle (p92)
-    OCR1B  = 0;                        // Not used.
-    OCR1A  = 128;                      // 50% duty at start
 
-    pinMode(1, OUTPUT);                // Enable PWM output OC1A on pin PB1.
+    // Set up Timer/Counter1 for PWM output
+    TIMSK = 0;             // Timer interrupts OFF (p92)
+    TCCR1 = _BV(PWM1A)     // Pulse Width Modulator A Enable. (p89)
+            | _BV(COM1A1)  // Clear OC1A on match; set on count $00.
+            | _BV(CS10);   // 1:1 prescale (p89)
+    GTCCR = 0;             // Do not enable PW Modulater B. (p90)
+    OCR1C = 255;           // Full 8-bit PWM cycle (p92)
+    OCR1B = 0;             // Not used.
+    OCR1A = 128;           // 50% duty at start
+
+    pinMode(1, OUTPUT);  // Enable PWM output OC1A on pin PB1.
   }
   static void Output(int x) {
     OCR1A = x;  // (p92)
@@ -157,17 +171,17 @@ struct FastPwm1A : public FastPwm1Base {
 struct FastPwm1B : public FastPwm1Base {
   static void Setup() {
     SetupPLL();
-  
-    // Set up Timer/Counter1 for PWM output
-    TIMSK  = 0;                        // Timer interrupts OFF (p92)
-    GTCCR  = _BV(PWM1B)                // Pulse Width Modulator B Enable. (p89)
-           | _BV(COM1B1);              // Clear OC1B on match; set on count $00 (p86).
-    TCCR1  = _BV(CS10);                // Do not enable PW Modulater A. 1:1 prescale. (p89)
-    OCR1C  = 255;                      // Full 8-bit PWM cycle (p92)
-    OCR1A  = 128;                      // Not used.
-    OCR1B  = 128;                      // 50% duty at start
 
-    pinMode(4, OUTPUT);                // Enable PWM output OC1B on pin PB4.
+    // Set up Timer/Counter1 for PWM output
+    TIMSK = 0;              // Timer interrupts OFF (p92)
+    GTCCR = _BV(PWM1B)      // Pulse Width Modulator B Enable. (p89)
+            | _BV(COM1B1);  // Clear OC1B on match; set on count $00 (p86).
+    TCCR1 = _BV(CS10);      // Do not enable PW Modulater A. 1:1 prescale. (p89)
+    OCR1C = 255;            // Full 8-bit PWM cycle (p92)
+    OCR1A = 128;            // Not used.
+    OCR1B = 128;            // 50% duty at start
+
+    pinMode(4, OUTPUT);  // Enable PWM output OC1B on pin PB4.
   }
   static void Output(int x) {
     OCR1B = x;  // (p92)
@@ -176,45 +190,45 @@ struct FastPwm1B : public FastPwm1Base {
 
 struct AnalogIn {
   static void NextInputA() {
-    ADMUX = 0 |    // Use Vcc for Reference; disconnect from PB0 (p134)
-            _BV(ADLAR) | // Left-Adjust the ADC Result in ADCH (p134)
-            3;     // ADC3 is PB3 is A.
+    ADMUX = 0 |           // Use Vcc for Reference; disconnect from PB0 (p134)
+            _BV(ADLAR) |  // Left-Adjust the ADC Result in ADCH (p134)
+            3;            // ADC3 is PB3 is A.
   }
   static void NextInputB() {
-    ADMUX = 0 |    // Use Vcc for Reference; disconnect from PB0 (p134)
-            _BV(ADLAR) | // Left-Adjust the ADC Result in ADCH (p134)
-            2;     // ADC2 is PB4 is B.
+    ADMUX = 0 |           // Use Vcc for Reference; disconnect from PB0 (p134)
+            _BV(ADLAR) |  // Left-Adjust the ADC Result in ADCH (p134)
+            2;            // ADC2 is PB4 is B.
   }
   static void NextInputK() {
-    ADMUX = 0 |    // Use Vcc for Reference; disconnect from PB0 (p134)
-            _BV(ADLAR) | // Left-Adjust the ADC Result in ADCH (p134)
-            1;     // ADC1 is PB2 is K.
+    ADMUX = 0 |           // Use Vcc for Reference; disconnect from PB0 (p134)
+            _BV(ADLAR) |  // Left-Adjust the ADC Result in ADCH (p134)
+            1;            // ADC1 is PB2 is K.
   }
   static void Setup() {
     ADCSRA = _BV(ADEN);  // Enable ADC first.
-    
+
     NextInputA();
-            
-    ADCSRB = 0; // free-running ADC; not Bipolar; not reversed. (p137)
+
+    ADCSRB = 0;  // free-running ADC; not Bipolar; not reversed. (p137)
 
     // (p125) max ADC res: clock 50kHz to 200kHz
     // If less than 10 bits, 200khz to 1MHz.
     // We use internal 16MHz clock, so try dividing by 32.
     // 1->/2 2->/4 3->/8 4->/16 5->/32 6->/64 7->/128  (p136)
-    // 7->4.88kHz   6->9.75kHz  5->19.53kHz Nyquist (freq of LED 2xToggle)  
-    // Use 6:   16MHz / 64 => 250kHz.    
+    // 7->4.88kHz   6->9.75kHz  5->19.53kHz Nyquist (freq of LED 2xToggle)
+    // Use 6:   16MHz / 64 => 250kHz.
     // 250kHz / 13 => 19,230 samples per sec; nyquist 9615 Hz
     // Use 5: Can do two samples, 9615 Hz.
 #define DIVISOR 5
-    byte tmp = _BV(ADEN) |  // Enable the Analog-to-Digital converter (p136)
-              _BV(ADATE) |  // Enable ADC auto trigger
-              _BV(ADIE) |  // Enable interrupt on Conversion Complete
-              DIVISOR;
+    byte tmp = _BV(ADEN) |   // Enable the Analog-to-Digital converter (p136)
+               _BV(ADATE) |  // Enable ADC auto trigger
+               _BV(ADIE) |   // Enable interrupt on Conversion Complete
+               DIVISOR;
     // ADCSRA = tmp;
     ADCSRA = tmp | _BV(ADSC);  // Start the fist conversion
   }
   static byte Input() {
-    return ADCH;   // Just 8-bit.  Assumes ADLAR is 1. 
+    return ADCH;  // Just 8-bit.  Assumes ADLAR is 1.
   }
 };
 
@@ -235,10 +249,10 @@ ISR(ADC_vect) {
     adc_switch = false;
     // One time out of 256 we sample K.  The rest we sample B.
     if (adc_counter == 2) {
-      AnalogB = ADCH;          // on 2, we still save B, but request K next.
+      AnalogB = ADCH;  // on 2, we still save B, but request K next.
       AnalogIn::NextInputK();
     } else if (adc_counter == 3) {
-      AnalogK = ADCH;          // on 3, we save K, but request B again.
+      AnalogK = ADCH;  // on 3, we save K, but request B again.
       AnalogIn::NextInputB();
     } else {
       AnalogB = ADCH;
@@ -273,149 +287,137 @@ void setup() {
 void loop() {
   // no need to return; just loop here.
   while (true) {
-
     // Wait for the next Analog sample in.
     {
       byte old_counter = adc_counter;
       byte c;
-#if MOC_EXTRA_LOOP_COUNT 
+#if MOC_EXTRA_LOOP_COUNT
       word loops = 0;
 #endif
       do {
-#if MOC_EXTRA_LOOP_COUNT 
+#if MOC_EXTRA_LOOP_COUNT
         ++loops;
 #endif
         c = adc_counter;
       } while (old_counter == c);
-      if (byte(old_counter+1) == c) {
-#if MOC_EXTRA_LOOP_COUNT 
+      if (byte(old_counter + 1) == c) {
+#if MOC_EXTRA_LOOP_COUNT
         moc.data = loops;
 #endif
       } else {
-        Fault(3); // Fault on overruns.  May relax this.
+        Fault(3);  // Fault on overruns.  May relax this.
       }
-      old_counter=c;
+      old_counter = c;
     }
 
     ::Loop();  // Call user's Loop.
 
 #if MOC_TICKS
     if (adc_counter == 0) {
-          static byte tick_counter;
+      static byte tick_counter;
       ++tick_counter;
       if ((tick_counter & 15) == 0) {
-    moc.Tick();
+        moc.Tick();
       }
     }
 #endif
-
   }
 }
 
-}  // namespace
+}  // namespace jerboa_internal
 
 void setup() { jerboa_internal::setup(); }
 void loop() { jerboa_internal::loop(); }
 
 // public wrappers
-inline byte InA()   { return jerboa_internal::AnalogA; }
-inline byte InB()   { return jerboa_internal::AnalogB; }
-inline byte InR()   { return jerboa_internal::AnalogK; }  // R was old name for K.
-inline byte InK()   { return jerboa_internal::AnalogK; }
+inline byte InA() { return jerboa_internal::AnalogA; }
+inline byte InB() { return jerboa_internal::AnalogB; }
+inline byte InR() { return jerboa_internal::AnalogK; }  // R was old name for K.
+inline byte InK() { return jerboa_internal::AnalogK; }
 inline void OutF(byte b) { jerboa_internal::pwm.Output(b); }
-inline void Moctal(byte b)  { jerboa_internal::moc.data = b; }
+inline void Moctal(byte b) { jerboa_internal::moc.data = b; }
 
-#define IN_A()   (jerboa_internal::AnalogA)
-#define IN_B()   (jerboa_internal::AnalogB)
-#define IN_R()   (jerboa_internal::AnalogK)  // R was old name for K.
-#define IN_K()   (jerboa_internal::AnalogK)
+#define IN_A() (jerboa_internal::AnalogA)
+#define IN_B() (jerboa_internal::AnalogB)
+#define IN_R() (jerboa_internal::AnalogK)  // R was old name for K.
+#define IN_K() (jerboa_internal::AnalogK)
 #define OUT_F(B) (jerboa_internal::pwm.Output(B))
-#define MOCTAL(B)  (jerboa_internal::moc.data = (B))
+#define MOCTAL(B) (jerboa_internal::moc.data = (B))
 
-using jerboa_internal::LedOn;
-using jerboa_internal::LedOff;
-using jerboa_internal::LedToggle;
-using jerboa_internal::LedSet;
 using jerboa_internal::Fault;
+using jerboa_internal::LedOff;
+using jerboa_internal::LedOn;
+using jerboa_internal::LedSet;
+using jerboa_internal::LedToggle;
 using jerboa_internal::SpinDelay;
 using jerboa_internal::SpinDelayFast;
 
 #endif
 
-
-
 namespace jerboa_random {
 
-typedef struct rc4_key
-{      
-     unsigned char state[256];      
-     unsigned char x;        
-     unsigned char y;
+typedef struct rc4_key {
+  unsigned char state[256];
+  unsigned char x;
+  unsigned char y;
 } rc4_key;
 
-void swap_byte(unsigned char *a, unsigned char *b)
-{
-     unsigned char swapByte;
-     
-     swapByte = *a;
-     *a = *b;      
-     *b = swapByte;
+void swap_byte(unsigned char *a, unsigned char *b) {
+  unsigned char swapByte;
+
+  swapByte = *a;
+  *a = *b;
+  *b = swapByte;
 }
 
-void prepare_key(unsigned char *key_data_ptr, int key_data_len, rc4_key *key)
-{
-     unsigned char swapByte;
-     unsigned char index1;
-     unsigned char index2;
-     unsigned char* state;
-     short counter;    
-     
-     state = &key->state[0];        
-     for(counter = 0; counter < 256; counter++)              
-     state[counter] = counter;              
-     key->x = 0;    
-     key->y = 0;    
-     index1 = 0;    
-     index2 = 0;            
-     for(counter = 0; counter < 256; counter++)      
-     {              
-          index2 = (key_data_ptr[index1] + state[counter] +
-index2) % 256;                
-          swap_byte(&state[counter], &state[index2]);            
+void prepare_key(unsigned char *key_data_ptr, int key_data_len, rc4_key *key) {
+  unsigned char swapByte;
+  unsigned char index1;
+  unsigned char index2;
+  unsigned char *state;
+  short counter;
 
-          index1 = (index1 + 1) % key_data_len;  
-     }      
- }
- 
-void rc4(unsigned char *buffer_ptr, int buffer_len, rc4_key *key)
-{
-     unsigned char x;
-     unsigned char y;
-     unsigned char* state;
-     unsigned char xorIndex;
-     short counter;              
-     
-     x = key->x;    
-     y = key->y;    
-     
-     state = &key->state[0];        
-     for(counter = 0; counter < buffer_len; counter ++)      
-     {              
-          x = (x + 1) % 256;                      
-          y = (state[x] + y) % 256;              
-          swap_byte(&state[x], &state[y]);                        
-               
-          xorIndex = state[x] + (state[y]) % 256;                
-               
-          buffer_ptr[counter] ^= state[xorIndex];        
-      }              
-      key->x = x;    
-      key->y = y;
+  state = &key->state[0];
+  for (counter = 0; counter < 256; counter++) state[counter] = counter;
+  key->x = 0;
+  key->y = 0;
+  index1 = 0;
+  index2 = 0;
+  for (counter = 0; counter < 256; counter++) {
+    index2 = (key_data_ptr[index1] + state[counter] + index2) % 256;
+    swap_byte(&state[counter], &state[index2]);
+
+    index1 = (index1 + 1) % key_data_len;
+  }
 }
- 
+
+void rc4(unsigned char *buffer_ptr, int buffer_len, rc4_key *key) {
+  unsigned char x;
+  unsigned char y;
+  unsigned char *state;
+  unsigned char xorIndex;
+  short counter;
+
+  x = key->x;
+  y = key->y;
+
+  state = &key->state[0];
+  for (counter = 0; counter < buffer_len; counter++) {
+    x = (x + 1) % 256;
+    y = (state[x] + y) % 256;
+    swap_byte(&state[x], &state[y]);
+
+    xorIndex = state[x] + (state[y]) % 256;
+
+    buffer_ptr[counter] ^= state[xorIndex];
+  }
+  key->x = x;
+  key->y = y;
+}
+
 rc4_key Engine;
 
-}
+}  // namespace jerboa_random
 
 void RandomSetup() {
   jerboa_random::prepare_key("RandomSetup", 12, &jerboa_random::Engine);
@@ -426,8 +428,6 @@ byte RandomByte() {
   jerboa_random::rc4(buf, 1, &jerboa_random::Engine);
   return buf[0];
 }
-
-
 
 #define SHIFTY 6
 #define PARM1 30
@@ -471,27 +471,18 @@ bool firstrun = true;
 
 #define NUM_TEMPOS 16
 byte *tempo_steps[] = {
-  (byte[]){ 0xAA, 0xAA, 0xAA, 0xAA },
-  (byte[]){ 0x99, 0x99, 0x99, 0x99 },
-  (byte[]){ 0x88, 0x88, 0x88, 0x88 },
-  (byte[]){ 0x77, 0x77, 0x77, 0x77 },
-  (byte[]){ 0x66, 0x66, 0x66, 0x66 },
-  (byte[]){ 0x65, 0x65, 0x65, 0x65 },
-  (byte[]){ 0x55, 0x55, 0x55, 0x55 },
-  (byte[]){ 0x54, 0x54, 0x54, 0x54 },
-  (byte[]){ 0x44, 0x44, 0x44, 0x44 },
-  (byte[]){ 0x43, 0x44, 0x43, 0x43 },
-  (byte[]){ 0x43, 0x43, 0x43, 0x43 },
-  (byte[]){ 0x34, 0x34, 0x33, 0x43 },
-  (byte[]){ 0x33, 0x33, 0x33, 0x33 },  // base tempo
-  (byte[]){ 0x32, 0x32, 0x32, 0x32 },
-  (byte[]){ 0x32, 0x22, 0x32, 0x22 },
-  (byte[]){ 0x22, 0x22, 0x22, 0x22 },
+    (byte[]){0xAA, 0xAA, 0xAA, 0xAA}, (byte[]){0x99, 0x99, 0x99, 0x99},
+    (byte[]){0x88, 0x88, 0x88, 0x88}, (byte[]){0x77, 0x77, 0x77, 0x77},
+    (byte[]){0x66, 0x66, 0x66, 0x66}, (byte[]){0x65, 0x65, 0x65, 0x65},
+    (byte[]){0x55, 0x55, 0x55, 0x55}, (byte[]){0x54, 0x54, 0x54, 0x54},
+    (byte[]){0x44, 0x44, 0x44, 0x44}, (byte[]){0x43, 0x44, 0x43, 0x43},
+    (byte[]){0x43, 0x43, 0x43, 0x43}, (byte[]){0x34, 0x34, 0x33, 0x43},
+    (byte[]){0x33, 0x33, 0x33, 0x33},  // base tempo
+    (byte[]){0x32, 0x32, 0x32, 0x32}, (byte[]){0x32, 0x22, 0x32, 0x22},
+    (byte[]){0x22, 0x22, 0x22, 0x22},
 };
 
-void Setup() {
-  RandomSetup();
-}
+void Setup() { RandomSetup(); }
 
 void Loop() {
   byte knobA = InA();
@@ -538,8 +529,11 @@ void Loop() {
   if (phase_sample_last != phase_sample) {
     audio_last = ((int)pgm_read_byte(SAMPLE_TABLE + phase_sample)) << SHIFTY;
     if (thresh_next > thresh_counter) {
-      audio_next = ((int)pgm_read_byte(SAMPLE_TABLE + phase_sample + (direction * 2 - 1))) << SHIFTY;
-      audio_next = (audio_next - audio_last) / ((int)(thresh_next - thresh_counter));
+      audio_next = ((int)pgm_read_byte(SAMPLE_TABLE + phase_sample +
+                                       (direction * 2 - 1)))
+                   << SHIFTY;
+      audio_next =
+          (audio_next - audio_last) / ((int)(thresh_next - thresh_counter));
     } else {
       audio_next = 0;
     }
@@ -599,7 +593,6 @@ void Loop() {
     }
   }
 
-
   // linear interpolation with shifts
   audio_now = (audio_last + audio_add) >> SHIFTY;
 
@@ -634,14 +627,14 @@ void Loop() {
     }
   }
   // click preventer??
-  if (abs(audio_now-audio_played)>32) {
-    audio_now = (audio_now+audio_played)/2;
-    if (abs(audio_now-audio_played)>32) {
-      audio_now = (audio_now+audio_played)/2;
+  if (abs(audio_now - audio_played) > 32) {
+    audio_now = (audio_now + audio_played) / 2;
+    if (abs(audio_now - audio_played) > 32) {
+      audio_now = (audio_now + audio_played) / 2;
     }
   }
   OutF(audio_now);
-  audio_played=audio_now;
+  audio_played = audio_now;
   // for linear interpolation
   audio_add = audio_add + audio_next;
 
@@ -687,21 +680,20 @@ void Loop() {
         stretch_amt = 0;
       }
 
-
       if (volume_mod > 0) {
         if (volume_mod > 3 || r3 < 200) {
           volume_mod--;
         }
       } else {
         // randomize direction
-        if (direction==base_direction) {
-          if (r1 < probability/8) {
-            direction = 1-base_direction;
+        if (direction == base_direction) {
+          if (r1 < probability / 8) {
+            direction = 1 - base_direction;
           }
         } else {
           if (r1 < probability) {
             direction = base_direction;
-          }          
+          }
         }
 
         // random retrig
@@ -717,7 +709,6 @@ void Loop() {
           retrig = 4;
         }
 
-
         if (do_retrigger == false && do_stutter == false) {
           // select new sample based on direction
           if (direction == 1) select_sample++;
@@ -730,11 +721,13 @@ void Loop() {
           }
 
           // make sure the new sample is not out of bounds
-          if (select_sample < select_sample_start) select_sample = select_sample_end;
-          if (select_sample > select_sample_end) select_sample = select_sample_start;
+          if (select_sample < select_sample_start)
+            select_sample = select_sample_end;
+          if (select_sample > select_sample_end)
+            select_sample = select_sample_start;
 
           // random jump
-          if (r3 < probability/2) {
+          if (r3 < probability / 2) {
             thresh_next = thresh_next + ((r1 - r3) * 4 / 255);
             retrig = ((r1 - r2) * 6 / 255);
             select_sample = (r3 * NUM_SAMPLES) / 60;
