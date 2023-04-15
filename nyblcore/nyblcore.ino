@@ -438,7 +438,7 @@ byte volume_reduce = 0;  // volume 0 to 6
 byte volume_mod = 0;
 byte thresh_counter = 0;
 byte thresh_next = 3;
-byte thresh_nibble = 0;
+bool thresh_nibble = 0;
 word phase_sample = 0;
 word phase_sample_last = 11;
 byte select_sample = 0;
@@ -470,16 +470,9 @@ bool firstrun = true;
 word debounce_eeprom = 0;
 
 #define NUM_TEMPOS 16
-byte *tempo_steps[] = {
-    (byte[]){0xAA, 0xAA, 0xAA, 0xAA}, (byte[]){0x99, 0x99, 0x99, 0x99},
-    (byte[]){0x88, 0x88, 0x88, 0x88}, (byte[]){0x77, 0x77, 0x77, 0x77},
-    (byte[]){0x66, 0x66, 0x66, 0x66}, (byte[]){0x65, 0x65, 0x65, 0x65},
-    (byte[]){0x55, 0x55, 0x55, 0x55}, (byte[]){0x54, 0x54, 0x54, 0x54},
-    (byte[]){0x44, 0x44, 0x44, 0x44}, (byte[]){0x43, 0x44, 0x43, 0x43},
-    (byte[]){0x43, 0x43, 0x43, 0x43}, (byte[]){0x34, 0x34, 0x33, 0x43},
-    (byte[]){0x33, 0x33, 0x33, 0x33},  // base tempo
-    (byte[]){0x32, 0x32, 0x32, 0x32}, (byte[]){0x32, 0x22, 0x32, 0x22},
-    (byte[]){0x22, 0x22, 0x22, 0x22},
+const byte tempo_steps[] = {
+    0xAA, 0x99, 0x98, 0x88, 0x87, 0x77, 0x76, 0x66,
+    0x65, 0x55, 0x54, 0x44, 0x43, 0x33, 0x32, 0x22,
 };
 
 void Setup() { RandomSetup(); }
@@ -639,12 +632,9 @@ void Loop() {
   thresh_counter++;
   if (thresh_counter == thresh_next) {
     thresh_counter = 0;
-    thresh_nibble++;
-    if (thresh_nibble >= 6) {
-      thresh_nibble = 0;
-    }
-    thresh_next = tempo_steps[tempo - stretch_amt][thresh_nibble / 2];
-    if (thresh_nibble % 2 == 0) {
+    thresh_nibble = 1 - thresh_nibble;
+    thresh_next = tempo_steps[tempo - stretch_amt];
+    if (thresh_nibble) {
       thresh_next = (byte)(thresh_next & 0xF0) >> 4;
     } else {
       thresh_next = (byte)(thresh_next & 0x0F);
