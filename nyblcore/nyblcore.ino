@@ -573,14 +573,12 @@ void Loop() {
         volume_reduce = 0;
         distortion = knobA - 200;  // 200-255 -> 0-30
       }
-      debounce_eeprom = 65534;
     } else if (knobK < PARM2) {
       probability = knobA / 2;  // 0-255 -> 0-100
-      debounce_eeprom = 65534;
     } else {
       do_stretchp = knobA / 2;
-      debounce_eeprom = 65534;
     }
+    debounce_eeprom = 65534;
   }
   if (knobB > knobB_last + 5 || knobB < knobB_last - 5) {
     lastMoved = 2;
@@ -588,14 +586,12 @@ void Loop() {
     // update the right parameter
     if (knobK < PARM1) {
       tempo = knobB * NUM_TEMPOS / 255;
-      debounce_eeprom = 65534;
     } else if (knobK < PARM2) {
       do_retriggerp = knobB / 4;
-      debounce_eeprom = 65534;
     } else {
       do_stutterp = knobB / 4;
-      debounce_eeprom = 65534;
     }
+    debounce_eeprom = 65534;
   }
 
   // linear interpolation with shifts
@@ -768,12 +764,6 @@ void Loop() {
         }
       }
 
-      // set new phase
-      // if (select_sample % 2 == 0) {
-      //   LedOn();
-      // } else {
-      //   LedOff();
-      // }
       phase_sample = pos[select_sample];
     }
   }
