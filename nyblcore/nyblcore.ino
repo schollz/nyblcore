@@ -1,6 +1,6 @@
 // SAMPLETABLE
 
-#include <EEPROM.h>
+#include <avr/eeprom.h>
 
 #ifndef JERBOA_H_
 #define JERBOA_H_
@@ -444,8 +444,7 @@ word phase_sample_last = 11;
 byte select_sample = 0;
 byte select_sample_start = 0;
 byte select_sample_end = NUM_SAMPLES - 1;
-bool direction = 1;       // 0 = reverse, 1 = forward
-bool base_direction = 1;  // 0 = reverse, 1 == forward
+bool direction = 1;  // 0 = reverse, 1 = forward
 byte retrig = 4;
 byte tempo = 12;
 int audio_last = 0;
@@ -491,21 +490,19 @@ void Loop() {
   byte knobB = InB();
   if (firstrun) {
     firstrun = false;
-    tempo = EEPROM.read(0);
+    tempo = eeprom_read_byte((uint8_t *)0);
     delay(5);
-    base_direction = EEPROM.read(1);
+    volume_reduce = eeprom_read_byte((uint8_t *)2);
     delay(5);
-    volume_reduce = EEPROM.read(2);
+    distortion = eeprom_read_byte((uint8_t *)3);
     delay(5);
-    distortion = EEPROM.read(3);
+    probability = eeprom_read_byte((uint8_t *)4);
     delay(5);
-    probability = EEPROM.read(4);
+    do_stretchp = eeprom_read_byte((uint8_t *)5);
     delay(5);
-    do_stretchp = EEPROM.read(5);
+    do_retriggerp = eeprom_read_byte((uint8_t *)6);
     delay(5);
-    do_retriggerp = EEPROM.read(6);
-    delay(5);
-    do_stutterp = EEPROM.read(7);
+    do_stutterp = eeprom_read_byte((uint8_t *)7);
     delay(5);
     knobA_last = knobA;
     knobK_last = knobK;
@@ -513,14 +510,14 @@ void Loop() {
   } else if (debounce_eeprom > 0) {
     debounce_eeprom--;
     if (debounce_eeprom == 0) {
-      EEPROM.write(0, tempo);
-      EEPROM.write(1, base_direction);
-      EEPROM.write(2, volume_reduce);
-      EEPROM.write(3, distortion);
-      EEPROM.write(4, probability);
-      EEPROM.write(5, do_stretchp);
-      EEPROM.write(6, do_retriggerp);
-      EEPROM.write(7, do_stutterp);
+      eeprom_write_byte((uint8_t *)1, 1);
+      eeprom_write_byte((uint8_t *)0, tempo);
+      eeprom_write_byte((uint8_t *)2, volume_reduce);
+      eeprom_write_byte((uint8_t *)3, distortion);
+      eeprom_write_byte((uint8_t *)4, probability);
+      eeprom_write_byte((uint8_t *)5, do_stretchp);
+      eeprom_write_byte((uint8_t *)6, do_retriggerp);
+      eeprom_write_byte((uint8_t *)7, do_stutterp);
     }
   }
   bcount++;
@@ -687,13 +684,13 @@ void Loop() {
         }
       } else {
         // randomize direction
-        if (direction == base_direction) {
+        if (direction == 1) {
           if (r1 < probability / 8) {
-            direction = 1 - base_direction;
+            direction = 0;
           }
         } else {
           if (r1 < probability) {
-            direction = base_direction;
+            direction = 1;
           }
         }
 
