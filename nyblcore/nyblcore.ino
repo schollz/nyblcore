@@ -468,6 +468,7 @@ byte do_stretchp = false;
 byte bcount = 0;
 byte lastMoved = 0;
 bool firstrun = true;
+word debounce_eeprom = 0;
 
 #define NUM_TEMPOS 16
 byte *tempo_steps[] = {
@@ -509,6 +510,18 @@ void Loop() {
     knobA_last = knobA;
     knobK_last = knobK;
     knobB_last = knobB;
+  } else if (debounce_eeprom > 0) {
+    debounce_eeprom--;
+    if (debounce_eeprom == 0) {
+      EEPROM.write(0, tempo);
+      EEPROM.write(1, base_direction);
+      EEPROM.write(2, volume_reduce);
+      EEPROM.write(3, distortion);
+      EEPROM.write(4, probability);
+      EEPROM.write(5, do_stretchp);
+      EEPROM.write(6, do_retriggerp);
+      EEPROM.write(7, do_stutterp);
+    }
   }
   bcount++;
   byte bthresh = knobA;
@@ -560,14 +573,13 @@ void Loop() {
         volume_reduce = 0;
         distortion = knobA - 200;  // 200-255 -> 0-30
       }
-      EEPROM.write(2, volume_reduce);
-      EEPROM.write(3, distortion);
+      debounce_eeprom = 65534;
     } else if (knobK < PARM2) {
       probability = knobA / 2;  // 0-255 -> 0-100
-      EEPROM.write(4, probability);
+      debounce_eeprom = 65534;
     } else {
       do_stretchp = knobA / 2;
-      EEPROM.write(5, do_stretchp);
+      debounce_eeprom = 65534;
     }
   }
   if (knobB > knobB_last + 5 || knobB < knobB_last - 5) {
@@ -575,21 +587,14 @@ void Loop() {
     knobB_last = knobB;
     // update the right parameter
     if (knobK < PARM1) {
-      if (knobB < 128) {
-        tempo = knobB * NUM_TEMPOS / 128;
-        base_direction = 0;  // reverse
-      } else {
-        tempo = (knobB - 128) * NUM_TEMPOS / 128;
-        base_direction = 1;  // forward
-      }
-      EEPROM.write(0, tempo);
-      EEPROM.write(1, base_direction);
+      tempo = knobB * NUM_TEMPOS / 255;
+      debounce_eeprom = 65534;
     } else if (knobK < PARM2) {
       do_retriggerp = knobB / 4;
-      EEPROM.write(6, do_retriggerp);
+      debounce_eeprom = 65534;
     } else {
       do_stutterp = knobB / 4;
-      EEPROM.write(7, do_stutterp);
+      debounce_eeprom = 65534;
     }
   }
 
