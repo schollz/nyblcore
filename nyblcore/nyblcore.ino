@@ -457,7 +457,7 @@ word stretch_add = 0;
 byte knobB_last = 0;
 byte knobA_last = 0;
 byte knobK_last = 0;
-byte probability = 30;
+byte probability = 0;
 bool do_retrigger = false;
 bool do_stutter = false;
 bool do_stretch = false;
@@ -485,7 +485,9 @@ void Loop() {
     firstrun = false;
     if (eeprom_read_byte((uint8_t *)1) == 18) {
       tempo = eeprom_read_byte((uint8_t *)0);
+      if (tempo > NUM_TEMPOS) tempo = 13;
       volume_reduce = eeprom_read_byte((uint8_t *)2);
+      if (volume_reduce > 10) volume_reduce = 0;
       distortion = eeprom_read_byte((uint8_t *)3);
       if (distortion > 55) distortion = 0;
       probability = eeprom_read_byte((uint8_t *)4);
