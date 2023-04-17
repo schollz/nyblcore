@@ -47,7 +47,6 @@ struct FastPwm1Base {
     // de https://github.com/viking/attiny85-player //
     PLLCSR |= _BV(PLLE);  // Enable 64 MHz PLL (p94)
     // SpinDelay(1);         /// delayMicroseconds(100);            // Stabilize
-    // TODO: check that this works
     byte spin_tmp = 0;
     for (byte j=0;j<100;j++) {
       spin_tmp++;
@@ -194,7 +193,6 @@ void setup() {
 void loop() {
   // no need to return; just loop here.
 
-  // TODO: try removing these lines
   while (true) {
     // Wait for the next Analog sample in.
     {
