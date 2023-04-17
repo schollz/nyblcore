@@ -651,6 +651,7 @@ void Loop() {
       phase_sample = pos[NUM_SAMPLES];
     }
 
+	// TODO: put this logic into a clock if-end
     if (phase_sample % retrigs[retrig] == 0) {
       // randoms
       byte r1 = RandomByte();

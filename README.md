@@ -2,5 +2,6 @@
 
 ## todo
 
-- move volume/tempo to the middle
-- only allow non-reverse in tempo knob
+- decrease volume in wavefolding, check p2p
+- add pitch up in addition to pitch down?
+- separate clock and audio?
