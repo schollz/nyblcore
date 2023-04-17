@@ -2,16 +2,6 @@
 
 #include <avr/eeprom.h>
 
-#ifndef JERBOA_H_
-#define JERBOA_H_
-
-#ifndef MOC_EXTRA_LOOP_COUNT
-#define MOC_EXTRA_LOOP_COUNT 0
-#endif
-
-#ifndef MOC_TICKS
-#define MOC_TICKS 0
-#endif
 
 #ifndef WHICH_PWM
 #define WHICH_PWM 1 /* 1 or 4 */
@@ -34,114 +24,34 @@
 extern void Setup(void);
 extern void Loop(void);
 
-namespace jerboa_internal {
+namespace nyblcore_internal {
 
-volatile word spin_tmp;
-void SpinDelay(word n) {
-  for (word i = 0; i < n; i++) {
-    for (word j = 0; j < 100; j++) {
-      spin_tmp += j;
-    }
-  }
-}
-void SpinDelayFast(word n) {
-  for (word i = 0; i < n; i++) {
-    spin_tmp += i;
-  }
-}
+// volatile word spin_tmp;
+// void SpinDelay(word n) {
+//   for (word i = 0; i < n; i++) {
+//     for (word j = 0; j < 100; j++) {
+//       spin_tmp += j;
+//     }
+//   }
+// }
+// void SpinDelayFast(word n) {
+//   for (word i = 0; i < n; i++) {
+//     spin_tmp += i;
+//   }
+// }
 
-const PROGMEM char MoctalTick_GapFollows[] = {
-    0 /*unused*/, 0, 0, 0, 0, 0, 0, 0, 1};
-
-bool led;
-void LedOn() {
-  led = true;
-  digitalWrite(WHICH_LED, HIGH);
-}  // Set low bit; other bits are pullups.
-void LedOff() {
-  led = false;
-  digitalWrite(WHICH_LED, LOW);
-}  // Clear low bit; other bits are pullups.
-void LedToggle() {
-  if (led)
-    LedOff();
-  else
-    LedOn();
-}
-void LedSet(bool value) {
-  if (value)
-    LedOn();
-  else
-    LedOff();
-}
-
-// Fault(n) stops everything else and makes flashy pulses in groups of n.
-void Fault(byte n) {
-  cli();  // No more interrupts.
-  USICR = 0;
-  pinMode(WHICH_LED, OUTPUT);
-  while (true) {
-    for (byte k = 0; k < n; k++) {
-      for (word i = 0; i < 8; i++) {
-        SpinDelay(400);
-        LedOn();
-        SpinDelay(100);
-        LedOff();
-      }
-      SpinDelay(5000);
-    }
-    SpinDelay(8000);
-  }
-}
-
-struct MoctalTicker {
-  // You must zero these yourself, if not global.
-  volatile byte data;     // Number to ouptut.
-  volatile byte shifted;  // High bit is output; shifts to the left.
-  volatile byte tick;     // Counts within states.
-  volatile byte state;    // Counts bits and gaps.
-  // volatile byte data_last;
-
-  static void Setup() { pinMode(WHICH_LED, OUTPUT); }
-
-  void Tick() {
-    if (tick == 0) {
-      // MOVE
-      if (state == 0 || state == 8) {
-        shifted = data;
-        state = 1;
-      } else {
-        shifted <<= 1;
-        ++state;
-      }
-
-      if (shifted & 0x80) {
-        tick = 5;  // Long pulse.
-      } else {
-        tick = 2;  // Short pulse.
-      }
-
-      if (pgm_read_byte(MoctalTick_GapFollows + state)) {
-        tick += 2;  // Pulse followed by longer gap.
-      }
-    }
-
-    if (tick > (pgm_read_byte(MoctalTick_GapFollows + state) ? 3 : 1)) {
-      LedOn();
-    } else {
-      LedOff();
-    }
-    tick--;
-  }
-};
-MoctalTicker moc;
 
 // Timer/Counter 1 PWM Output OC1A (PB1)
 struct FastPwm1Base {
   static void SetupPLL() {
     // de https://github.com/viking/attiny85-player //
     PLLCSR |= _BV(PLLE);  // Enable 64 MHz PLL (p94)
-    SpinDelay(1);         /// delayMicroseconds(100);            // Stabilize
+    // SpinDelay(1);         /// delayMicroseconds(100);            // Stabilize
+    // TODO: check that this works
+    byte spin_tmp = 0;
+    for (byte j=0;j<100;j++) {
+      spin_tmp++;
+    }
     while (!(PLLCSR & _BV(PLOCK)))
       ;                   // Wait for it... (p94)
     PLLCSR |= _BV(PCKE);  // Timer1 source = PLL
@@ -274,12 +184,9 @@ void setup() {
   pinMode(5, INPUT_PULLUP);
   pinMode(WHICH_LED, OUTPUT);
   pinMode(WHICH_PWM, OUTPUT);
-  LedOff();
 
   pwm.Setup();
   in.Setup();
-  // moc.Setup();
-  // moc.data = 0;
 
   ::Setup();  // Call user's Setup.
 }
@@ -291,70 +198,43 @@ void loop() {
     {
       byte old_counter = adc_counter;
       byte c;
-#if MOC_EXTRA_LOOP_COUNT
-      word loops = 0;
-#endif
       do {
-#if MOC_EXTRA_LOOP_COUNT
-        ++loops;
-#endif
+
         c = adc_counter;
       } while (old_counter == c);
       if (byte(old_counter + 1) == c) {
-#if MOC_EXTRA_LOOP_COUNT
-        moc.data = loops;
-#endif
       } else {
-        Fault(3);  // Fault on overruns.  May relax this.
+        // Fault on overruns.  ignore
       }
       old_counter = c;
     }
 
     ::Loop();  // Call user's Loop.
-
-#if MOC_TICKS
-    if (adc_counter == 0) {
-      static byte tick_counter;
-      ++tick_counter;
-      if ((tick_counter & 15) == 0) {
-        moc.Tick();
-      }
-    }
-#endif
   }
 }
 
-}  // namespace jerboa_internal
+}  // namespace nyblcore_internal
 
-void setup() { jerboa_internal::setup(); }
-void loop() { jerboa_internal::loop(); }
+void setup() { nyblcore_internal::setup(); }
+void loop() { nyblcore_internal::loop(); }
 
 // public wrappers
-inline byte InA() { return jerboa_internal::AnalogA; }
-inline byte InB() { return jerboa_internal::AnalogB; }
-inline byte InR() { return jerboa_internal::AnalogK; }  // R was old name for K.
-inline byte InK() { return jerboa_internal::AnalogK; }
-inline void OutF(byte b) { jerboa_internal::pwm.Output(b); }
-inline void Moctal(byte b) { jerboa_internal::moc.data = b; }
+inline byte InA() { return nyblcore_internal::AnalogA; }
+inline byte InB() { return nyblcore_internal::AnalogB; }
+inline byte InR() { return nyblcore_internal::AnalogK; }  // R was old name for K.
+inline byte InK() { return nyblcore_internal::AnalogK; }
+inline void OutF(byte b) { nyblcore_internal::pwm.Output(b); }
 
-#define IN_A() (jerboa_internal::AnalogA)
-#define IN_B() (jerboa_internal::AnalogB)
-#define IN_R() (jerboa_internal::AnalogK)  // R was old name for K.
-#define IN_K() (jerboa_internal::AnalogK)
-#define OUT_F(B) (jerboa_internal::pwm.Output(B))
-#define MOCTAL(B) (jerboa_internal::moc.data = (B))
+#define IN_A() (nyblcore_internal::AnalogA)
+#define IN_B() (nyblcore_internal::AnalogB)
+#define IN_R() (nyblcore_internal::AnalogK)  // R was old name for K.
+#define IN_K() (nyblcore_internal::AnalogK)
+#define OUT_F(B) (nyblcore_internal::pwm.Output(B))
 
-using jerboa_internal::Fault;
-using jerboa_internal::LedOff;
-using jerboa_internal::LedOn;
-using jerboa_internal::LedSet;
-using jerboa_internal::LedToggle;
-using jerboa_internal::SpinDelay;
-using jerboa_internal::SpinDelayFast;
+// using nyblcore_internal::SpinDelay;
+// using nyblcore_internal::SpinDelayFast;
 
-#endif
-
-namespace jerboa_random {
+namespace nyblcore_random {
 
 typedef struct rc4_key {
   unsigned char state[256];
@@ -417,15 +297,15 @@ void rc4(unsigned char *buffer_ptr, int buffer_len, rc4_key *key) {
 
 rc4_key Engine;
 
-}  // namespace jerboa_random
+}  // namespace nyblcore_random
 
 void RandomSetup() {
-  jerboa_random::prepare_key("RandomSetup", 12, &jerboa_random::Engine);
+  nyblcore_random::prepare_key("RandomSetup", 12, &nyblcore_random::Engine);
 }
 
 byte RandomByte() {
   unsigned char buf[1] = {0};
-  jerboa_random::rc4(buf, 1, &jerboa_random::Engine);
+  nyblcore_random::rc4(buf, 1, &nyblcore_random::Engine);
   return buf[0];
 }
 
@@ -531,9 +411,9 @@ void Loop() {
     bthresh = knobB;
   }
   if (bcount < bthresh) {
-    LedOn();
+    digitalWrite(WHICH_LED, HIGH);
   } else {
-    LedOff();
+    digitalWrite(WHICH_LED, LOW);
   }
   if (bcount == 255) {
     bcount = 0;
