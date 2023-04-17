@@ -77,7 +77,7 @@ func main() {
 		var originalFilenames []string
 		for _, file := range files {
 			filename := filepath.Base(file.Filename)
-			if strings.Contains(filename, ".wav") || strings.Contains(filename, ".flac") || strings.Contains(filename, ".aif") || strings.Contains(filename, ".ogg") {
+			if strings.Contains(filename, ".wav") || strings.Contains(filename, ".flac") || strings.Contains(filename, ".aif") || strings.Contains(filename, ".ogg") || strings.Contains(filename, ".mp3") {
 				// open a temp file to save the uploaded file
 				ftemp, err := os.CreateTemp("", "nyblcore*"+filepath.Ext(filename))
 				if err != nil {
