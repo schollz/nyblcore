@@ -570,7 +570,7 @@ void Loop() {
         distortion = 0;
       } else {
         volume_reduce = 0;
-        distortion = knobA - 200;  // 200-255 -> 0-30
+        distortion = knobA - 200;  // 200-255 -> 0-55
       }
     } else if (knobK < PARM2) {
       probability = knobA / 2;  // 0-255 -> 0-100
@@ -609,12 +609,14 @@ void Loop() {
         } else {
           audio_now = 255 - distortion;
         }
+        audio_now = 128 + ((255-audio_now)/(distortion>>3+1));
       } else {
         if (audio_now > distortion) {
           audio_now -= distortion;
         } else {
           audio_now = distortion - audio_now;
         }
+        audio_now = 128 - ((128-audio_now)/(distortion>>3+1));
       }
     }
     // reduce volume
