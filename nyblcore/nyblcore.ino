@@ -433,6 +433,7 @@ byte RandomByte() {
 #define PARM1 30
 #define PARM2 220
 
+
 byte distortion = 0;
 byte volume_reduce = 0;  // volume 0 to 6
 byte volume_mod = 0;
@@ -441,6 +442,10 @@ byte thresh_next = 3;
 bool thresh_nibble = 0;
 word phase_sample = 0;
 word phase_sample_last = 11;
+byte thresh_counter_t = 0;
+byte thresh_next_t = 3;
+bool thresh_nibble_t = 0;
+word phase_t = 0;
 byte select_sample = 0;
 byte select_sample_start = 0;
 byte select_sample_end = NUM_SAMPLES - 1;
@@ -632,6 +637,7 @@ void Loop() {
   // for linear interpolation
   audio_add = audio_add + audio_next;
 
+  // audio sample iterations
   thresh_counter++;
   if (thresh_counter == thresh_next) {
     thresh_counter = 0;
@@ -650,9 +656,23 @@ void Loop() {
     } else if (phase_sample < 0) {
       phase_sample = pos[NUM_SAMPLES];
     }
+  }
 
-	// TODO: put this logic into a clock if-end
-    if (phase_sample % retrigs[retrig] == 0) {
+  // tempo clocked effects
+  thresh_counter_t++;
+  if (thresh_counter_t == thresh_next_t) {
+    thresh_counter_t = 0;
+    thresh_nibble_t = 1 - thresh_nibble_t;
+    thresh_next_t = tempo_steps[tempo];
+    if (thresh_nibble_t) {
+      thresh_next_t = (byte)(thresh_next_t & 0xF0) >> 4;
+    } else {
+      thresh_next_t = (byte)(thresh_next_t & 0x0F);
+    }
+
+    phase_t++;
+    if (phase_t == retrigs[retrig]) {
+      phase_t = 0;
       // randoms
       byte r1 = RandomByte();
       byte r2 = RandomByte();
@@ -754,7 +774,6 @@ void Loop() {
           }
         }
       }
-
       phase_sample = pos[select_sample];
     }
   }
