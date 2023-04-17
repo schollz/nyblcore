@@ -457,7 +457,7 @@ int audio_next = -1;
 byte audio_now = 0;
 byte audio_played = 0;
 char audio_add = 0;
-byte stretch_amt = 0;
+char stretch_amt = 0;
 word stretch_add = 0;
 byte knobB_last = 0;
 byte knobA_last = 0;
@@ -466,6 +466,7 @@ byte probability = 0;
 bool do_retrigger = false;
 bool do_stutter = false;
 bool do_stretch = false;
+bool do_stretch_slow = true;
 byte do_retriggerp = false;
 byte do_stutterp = false;
 byte do_stretchp = false;
@@ -679,6 +680,9 @@ void Loop() {
       byte r3 = RandomByte();
       byte r4 = RandomByte();
 
+      if (select_sample==0) {
+        do_stretch_slow = r1 < 128;
+      }
       // do stretching
       if (do_stretchp > 10) {
         do_stretch = (r1 < do_stretchp);
@@ -686,7 +690,11 @@ void Loop() {
         do_stretch = false;
       }
       if (do_stretch) {
-        stretch_amt++;
+        if (do_stretch_slow) {
+          stretch_amt++;
+        } else {
+          stretch_amt--;
+        }
         if (tempo - stretch_amt < 0) stretch_amt = tempo;
       } else {
         stretch_amt = 0;
