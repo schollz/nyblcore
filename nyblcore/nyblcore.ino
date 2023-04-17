@@ -193,6 +193,8 @@ void setup() {
 
 void loop() {
   // no need to return; just loop here.
+
+  // TODO: try removing these lines
   while (true) {
     // Wait for the next Analog sample in.
     {
