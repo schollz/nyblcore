@@ -490,14 +490,14 @@ void Loop() {
         } else {
           audio_now = 255 - distortion;
         }
-        audio_now = 128 + ((255-audio_now)/(distortion>>3+1));
+        audio_now = 128 + ((audio_now-128)/((distortion>>4)+1));
       } else {
         if (audio_now > distortion) {
           audio_now -= distortion;
         } else {
           audio_now = distortion - audio_now;
         }
-        audio_now = 128 - ((128-audio_now)/(distortion>>3+1));
+        audio_now = 128 - ((128-audio_now)/((distortion>>4)+1));
       }
     }
     // reduce volume
