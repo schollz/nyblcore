@@ -1,6 +1,44 @@
+// nyblcore v1.0.0
+//
+// ATtiny85 pinout:
+//
+//         +--u--+
+//      NC |1   8| VCC
+//     InA |2   7| InK
+//     InB |3   6| Audio out
+//     GND |4   5| LED out
+//         +-----+
+//  
+
+// <sample>
 // SAMPLETABLE
+// </sample>
 
 #include <avr/eeprom.h>
+
+// THE FOLLOWING 308 LINES OF CODE FOLLOWS THE MIT LICENSE
+//
+// MIT License
+//
+// Copyright (c) 2019 Strick Yak
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 
 #ifndef WHICH_PWM
@@ -11,35 +49,12 @@
 #define WHICH_LED 0
 #endif
 
-// ATtiny{25,45,85}
-//
-//         +--u--+
-//       x |R   V| x
-//   (3) 3 |A   K| 2 (1)
-//   (2) 4 |B   F| 1
-//       x |G   L| 0
-//         +-----+
-//  (ADC)          PB
+
 
 extern void Setup(void);
 extern void Loop(void);
 
 namespace nyblcore_internal {
-
-// volatile word spin_tmp;
-// void SpinDelay(word n) {
-//   for (word i = 0; i < n; i++) {
-//     for (word j = 0; j < 100; j++) {
-//       spin_tmp += j;
-//     }
-//   }
-// }
-// void SpinDelayFast(word n) {
-//   for (word i = 0; i < n; i++) {
-//     spin_tmp += i;
-//   }
-// }
-
 
 // Timer/Counter 1 PWM Output OC1A (PB1)
 struct FastPwm1Base {
@@ -308,6 +323,13 @@ byte RandomByte() {
   nyblcore_random::rc4(buf, 1, &nyblcore_random::Engine);
   return buf[0];
 }
+
+
+// 
+// THE PREVIOUS CODE FOLLOWS THE MIT LICENSE
+//
+
+
 
 #define SHIFTY 6
 #define PARM1 30
