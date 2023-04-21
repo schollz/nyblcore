@@ -2,9 +2,9 @@
 <p class="message">{{ .message }}</p>
 {{with .error}}<p class="error">Error: <em>{{.}}</em></p>{{end}}
 {{ with .image }}
-<img src="https://nyblcore.com/static/{{.}}" style="width:100%;">
+<img src="https://api.nyblcore.com/static/{{.}}" style="width:100%;">
 <audio controls>
-<source src="https://nyblcore.com/static/{{.}}.wav" type="audio/wav">
+<source src="https://api.nyblcore.com/static/{{.}}.wav" type="audio/wav">
 Your browser does not support the audio element.
 </audio>
 {{end}}
