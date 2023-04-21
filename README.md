@@ -7,7 +7,7 @@ nyblcore is...
 
 - a tiny **ATtiny85-based sample player** device for diy enthusiasts.
 - powered by a single AAA for **~5-8 hours of battery life**.
-- holding 8 kB of storage for up to **1.2 seconds of 8-bit audio sampled @ 4.3 kHz**.
+- holding 8 kB of storage for up to **1.2 seconds of 8-bit audio sampled @ 4.1 kHz**.
 - controlled with three multi-functional knobs that modulate tempo, volume, distortion, and fx.
 - manipulated with **three fx knobs that "control" jump, retrig, stutter and stretch**.
 - able to **load custom firmware / audio** using an [Arduino](https://www.amazon.com/Arduino-A000066-ARDUINO-UNO-R3/dp/B008GRTSV6/?tag=scholl-20&th=1) or an [AVR usb programmer](https://www.amazon.com/whiteeeen-Tiny-AVR-Programmer/dp/B09921SC7Z/?tag=scholl-20&th=1).
