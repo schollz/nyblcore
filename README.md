@@ -23,4 +23,4 @@ nyblcore is open-source, all the code and boards are on my github here.
 
 If you make this device yourself, please consider [sponsoring me on github](https://github.com/sponsors/schollz) to support my time and effort in this project and to continue to allow me to explore making devices and releasing them as open-source. 
 
-of course, you can also support this work by [buying the device directly from me](https://nyblcore.com/#buy)
+of course, you can also support this work by [buying the device directly from me](https://nyblcore.com/#buy).
