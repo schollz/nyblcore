@@ -8,7 +8,7 @@
 //     InB |3   6| Audio out
 //     GND |4   5| LED out
 //         +-----+
-//  
+//
 
 // <sample>
 // SAMPLETABLE
@@ -29,8 +29,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -40,7 +40,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
 #ifndef WHICH_PWM
 #define WHICH_PWM 1 /* 1 or 4 */
 #endif
@@ -48,8 +47,6 @@
 #ifndef WHICH_LED
 #define WHICH_LED 0
 #endif
-
-
 
 extern void Setup(void);
 extern void Loop(void);
@@ -63,7 +60,7 @@ struct FastPwm1Base {
     PLLCSR |= _BV(PLLE);  // Enable 64 MHz PLL (p94)
     // SpinDelay(1);         /// delayMicroseconds(100);            // Stabilize
     byte spin_tmp = 0;
-    for (byte j=0;j<100;j++) {
+    for (byte j = 0; j < 100; j++) {
       spin_tmp++;
     }
     while (!(PLLCSR & _BV(PLOCK)))
@@ -214,7 +211,6 @@ void loop() {
       byte old_counter = adc_counter;
       byte c;
       do {
-
         c = adc_counter;
       } while (old_counter == c);
       if (byte(old_counter + 1) == c) {
@@ -236,7 +232,9 @@ void loop() { nyblcore_internal::loop(); }
 // public wrappers
 inline byte InA() { return nyblcore_internal::AnalogA; }
 inline byte InB() { return nyblcore_internal::AnalogB; }
-inline byte InR() { return nyblcore_internal::AnalogK; }  // R was old name for K.
+inline byte InR() {
+  return nyblcore_internal::AnalogK;
+}  // R was old name for K.
 inline byte InK() { return nyblcore_internal::AnalogK; }
 inline void OutF(byte b) { nyblcore_internal::pwm.Output(b); }
 
@@ -324,17 +322,13 @@ byte RandomByte() {
   return buf[0];
 }
 
-
-// 
+//
 // THE PREVIOUS CODE FOLLOWS THE MIT LICENSE
 //
-
-
 
 #define SHIFTY 6
 #define PARM1 30
 #define PARM2 220
-
 
 byte distortion = 0;
 byte volume_reduce = 0;  // volume 0 to 6
@@ -378,11 +372,9 @@ bool firstrun = true;
 word debounce_eeprom = 0;
 
 #define NUM_TEMPOS 19
-const byte tempo_steps[] = {
-    0xAA, 0xA9, 0x99, 0x98, 0x88, 0x87, 0x77, 0x76, 0x66,
-    0x65, 0x55, 0x54, 0x44, 0x43, 0x33, 0x32, 0x22,
-    0x21, 0x11
-};
+const byte tempo_steps[] = {0xAA, 0xA9, 0x99, 0x98, 0x88, 0x87, 0x77,
+                            0x76, 0x66, 0x65, 0x55, 0x54, 0x44, 0x43,
+                            0x33, 0x32, 0x22, 0x21, 0x11};
 
 void Setup() { RandomSetup(); }
 
@@ -512,14 +504,14 @@ void Loop() {
         } else {
           audio_now = 255 - distortion;
         }
-        audio_now = 128 + ((audio_now-128)/((distortion>>4)+1));
+        audio_now = 128 + ((audio_now - 128) / ((distortion >> 4) + 1));
       } else {
         if (audio_now > distortion) {
           audio_now -= distortion;
         } else {
           audio_now = distortion - audio_now;
         }
-        audio_now = 128 - ((128-audio_now)/((distortion>>4)+1));
+        audio_now = 128 - ((128 - audio_now) / ((distortion >> 4) + 1));
       }
     }
     // reduce volume
@@ -556,11 +548,20 @@ void Loop() {
     }
 
     // determine directions
-    phase_sample += (direction * 2 - 1);
-    if (phase_sample > pos[NUM_SAMPLES]) {
-      phase_sample = 0;
-    } else if (phase_sample < 0) {
-      phase_sample = pos[NUM_SAMPLES];
+    if (direction) {
+      // forward
+      if (phase_sample < pos[NUM_SAMPLES]) {
+        phase_sample++;
+      } else {
+        phase_sample = 0;
+      }
+    } else {
+      // reverse
+      if (phase_sample == 0) {
+        phase_sample = pos[NUM_SAMPLES];
+      } else {
+        phase_sample--;
+      }
     }
   }
 
@@ -585,8 +586,8 @@ void Loop() {
       byte r3 = RandomByte();
       byte r4 = RandomByte();
 
-      if (select_sample==0) {
-        do_stretch_slow = r1 < 128;
+      if (select_sample == 0) {
+        do_stretch_slow = r1 < 200;
       }
       // do stretching
       if (do_stretchp > 10) {
@@ -600,7 +601,11 @@ void Loop() {
         } else {
           stretch_amt--;
         }
-        if (tempo - stretch_amt < 0) stretch_amt = tempo;
+        if (tempo - 1 < stretch_amt) {
+          stretch_amt = tempo - 1;
+        } else if (tempo - NUM_TEMPOS + 1 > stretch_amt) {
+          stretch_amt = tempo - NUM_TEMPOS + 1;
+        }
       } else {
         stretch_amt = 0;
       }
@@ -612,11 +617,11 @@ void Loop() {
       } else {
         // randomize direction
         if (direction == 1) {
-          if (r1 < probability / 8) {
+          if (r1 < probability / 4) {
             direction = 0;
           }
         } else {
-          if (r1 < probability) {
+          if (r1 < probability / 2) {
             direction = 1;
           }
         }
@@ -653,9 +658,9 @@ void Loop() {
 
           // random jump
           if (r3 < probability / 2) {
-            thresh_next = thresh_next + ((r1 - r3) * 4 / 255);
-            retrig = ((r1 - r2) * 6 / 255);
-            select_sample = (r3 * NUM_SAMPLES) / 60;
+            // thresh_next = thresh_next + (r1 * 4 / 255);
+            // retrig = (RandomByte() * 6 / 255);
+            select_sample = (RandomByte() * NUM_SAMPLES) / 255;
           }
         }
 
