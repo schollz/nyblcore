@@ -621,7 +621,7 @@ void Loop() {
             direction = 0;
           }
         } else {
-          if (r1 < probability / 2) {
+          if (r1 < probability) {
             direction = 1;
           }
         }
