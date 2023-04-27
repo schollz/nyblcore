@@ -1,6 +1,6 @@
 # nyblcore
 
-![image](https://user-images.githubusercontent.com/6550035/233191162-b6a9d175-3314-4aa9-abc1-d86e2248c9ee.png)
+![image](https://user-images.githubusercontent.com/6550035/234938365-8c981240-9160-435f-89e8-0a2bbb25228b.png)
 
 
 nyblcore is...
