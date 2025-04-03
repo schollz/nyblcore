@@ -5,6 +5,7 @@
 
 ## diy
 
+- [Website](https://nyblcore.com)
 - [Schematic](https://github.com/schollz/nyblcore/blob/main/board/schematic_v1.pdf)
 - [Board files](https://github.com/schollz/nyblcore/tree/main/board)
 - [Source code](https://github.com/schollz/nyblcore/blob/main/nyblcore/nyblcore.ino)
