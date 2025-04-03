@@ -3,6 +3,18 @@
 ![image](https://user-images.githubusercontent.com/6550035/234938365-8c981240-9160-435f-89e8-0a2bbb25228b.png)
 
 
+## diy
+
+- [Schematic](https://github.com/schollz/nyblcore/blob/main/board/schematic_v1.pdf)
+- [Board files](https://github.com/schollz/nyblcore/tree/main/board)
+- [Source code](https://github.com/schollz/nyblcore/blob/main/nyblcore/nyblcore.ino)
+- [Firmware](https://infinitedigits.co/wares/nyblcore/#upload)
+- [Instructions for uploading firmware](https://infinitedigits.co/wares/nyblcore/#uploading-firmware-tools) 
+- [Video demonstration](https://www.youtube.com/watch?v=cA8lai6gwKw)
+- [Video DIY guide](https://www.youtube.com/watch?v=mrZleTfIKjE)
+
+## what is it?
+
 nyblcore is...
 
 - a tiny **ATtiny85-based sample player** device for diy enthusiasts.
